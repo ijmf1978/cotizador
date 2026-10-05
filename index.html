@@ -1,0 +1,1207 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#b81920">
+<title>Cotizador Fermetal</title>
+<style>
+:root{
+  --pri:#b81920; --pri-2:#8f1218; --bg:#f3f5f8; --card:#fff; --tx:#1c2430; --mut:#6b7686;
+  --bd:#dfe4ea; --ok:#1f8a4c; --warn:#b7791f; --err:#c53030; --rad:10px;
+  --sh:0 1px 2px rgba(16,24,40,.06),0 1px 3px rgba(16,24,40,.08);
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%}
+body{font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;background:var(--bg);color:var(--tx);font-size:15px;line-height:1.4}
+button,input,select,textarea{font:inherit;color:inherit}
+a{color:var(--pri)}
+.hidden{display:none!important}
+
+/* ---------- Layout ---------- */
+#app{display:flex;min-height:100vh}
+#side{width:220px;background:var(--pri);color:#fff;display:flex;flex-direction:column;position:sticky;top:0;height:100vh;flex-shrink:0}
+#side .brand{padding:18px 16px;display:flex;gap:10px;align-items:center;border-bottom:1px solid rgba(255,255,255,.15)}
+#side .brand img{width:38px;height:38px;object-fit:contain;background:#fff;border-radius:8px;padding:3px}
+#side .brand b{font-size:15px;line-height:1.2;word-break:break-word}
+#side nav{flex:1;padding:10px 8px}
+.nav-btn{display:flex;align-items:center;gap:10px;width:100%;background:none;border:0;color:#e8eef5;padding:11px 12px;border-radius:8px;cursor:pointer;text-align:left;font-size:15px}
+.nav-btn:hover{background:rgba(255,255,255,.1)}
+.nav-btn.on{background:#fff;color:var(--pri);font-weight:600}
+.nav-btn svg{width:20px;height:20px;flex-shrink:0}
+#side .foot{padding:12px 16px;font-size:13px;border-top:1px solid rgba(255,255,255,.15)}
+#side .foot button{background:none;border:0;color:#fff;text-decoration:underline;cursor:pointer;padding:0;font-size:13px}
+#wrap{flex:1;min-width:0;display:flex;flex-direction:column}
+#top{background:var(--card);border-bottom:1px solid var(--bd);padding:10px 20px;display:flex;align-items:center;gap:12px;position:sticky;top:0;z-index:20}
+#top h1{font-size:18px;margin:0;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.chip{display:inline-flex;align-items:center;gap:6px;background:#eef4fa;color:var(--pri);border:1px solid #cfe0f0;border-radius:999px;padding:5px 11px;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap}
+.chip.old{background:#fff7e6;color:var(--warn);border-color:#f3dcae}
+#main{padding:20px;max-width:1200px;width:100%;margin:0 auto;flex:1}
+#bnav{display:none}
+
+@media (max-width:820px){
+  #side{display:none}
+  #top{padding:10px 14px}
+  #main{padding:14px 12px 90px}
+  #bnav{display:flex;position:fixed;bottom:0;left:0;right:0;background:var(--card);border-top:1px solid var(--bd);z-index:30;padding-bottom:env(safe-area-inset-bottom)}
+  #bnav .nav-btn{flex-direction:column;gap:2px;color:var(--mut);font-size:11px;padding:8px 2px;border-radius:0;align-items:center;text-align:center}
+  #bnav .nav-btn.on{background:none;color:var(--pri)}
+}
+
+/* ---------- Components ---------- */
+.card{background:var(--card);border:1px solid var(--bd);border-radius:var(--rad);box-shadow:var(--sh);padding:16px;margin-bottom:16px}
+.card h2{font-size:16px;margin:0 0 12px}
+.card h3{font-size:14px;margin:16px 0 8px;color:var(--mut);text-transform:uppercase;letter-spacing:.04em}
+.row{display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end}
+.row>*{flex:1 1 180px}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
+label.f{display:flex;flex-direction:column;gap:4px;font-size:13px;color:var(--mut);font-weight:500}
+input[type=text],input[type=number],input[type=email],input[type=tel],input[type=date],input[type=password],input[type=search],select,textarea{
+  width:100%;padding:9px 11px;border:1px solid var(--bd);border-radius:8px;background:#fff;color:var(--tx);font-size:15px;min-height:40px}
+input:focus,select:focus,textarea:focus{outline:2px solid #9cc3e6;border-color:var(--pri)}
+textarea{min-height:70px;resize:vertical}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;border:1px solid var(--bd);background:#fff;padding:9px 14px;border-radius:8px;cursor:pointer;font-weight:600;font-size:14px;min-height:40px;white-space:nowrap;text-decoration:none;color:var(--tx)}
+.btn:hover{background:#f6f8fa}
+.btn.pri{background:var(--pri);border-color:var(--pri);color:#fff}
+.btn.pri:hover{background:var(--pri-2)}
+.btn.ok{background:#25d366;border-color:#20bd5a;color:#fff}
+.btn.danger{color:var(--err);border-color:#f0c4c4}
+.btn.sm{padding:5px 9px;min-height:32px;font-size:13px}
+.btn svg{width:17px;height:17px}
+.btns{display:flex;gap:8px;flex-wrap:wrap}
+.muted{color:var(--mut)}
+.small{font-size:13px}
+.right{text-align:right}
+.tbl-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+table.t{width:100%;border-collapse:collapse;font-size:14px}
+table.t th{text-align:left;font-size:12px;text-transform:uppercase;letter-spacing:.03em;color:var(--mut);border-bottom:1px solid var(--bd);padding:8px;white-space:nowrap}
+table.t td{border-bottom:1px solid #eef1f4;padding:8px;vertical-align:middle}
+table.t tr:hover td{background:#fafbfc}
+table.t td.num,table.t th.num{text-align:right;white-space:nowrap}
+.badge{display:inline-block;padding:2px 9px;border-radius:999px;font-size:12px;font-weight:600;background:#eef1f4;color:#4a5565}
+.badge.Pendiente{background:#fff4e0;color:#9a6200}
+.badge.Aprobada{background:#e3f6ea;color:#1a7340}
+.badge.Rechazada{background:#fde8e8;color:#a32020}
+.badge.Vencida{background:#eceef1;color:#69707c}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:16px}
+.stat{background:var(--card);border:1px solid var(--bd);border-radius:var(--rad);padding:14px}
+.stat .k{font-size:12px;color:var(--mut);text-transform:uppercase;letter-spacing:.04em}
+.stat .v{font-size:22px;font-weight:700;margin-top:4px}
+.empty{text-align:center;padding:36px 16px;color:var(--mut)}
+.toolbar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;align-items:center}
+.toolbar input[type=search]{flex:1 1 220px;width:auto}
+.toolbar select{width:auto;flex:0 0 auto}
+
+/* Editor */
+.ed-grid{display:grid;grid-template-columns:1fr 320px;gap:16px;align-items:start}
+.ed-side{position:sticky;top:76px}
+@media (max-width:1000px){.ed-grid{grid-template-columns:1fr}.ed-side{position:static}}
+.lines td input{min-height:34px;padding:5px 7px;font-size:14px}
+.lines .q{width:80px}.lines .p{width:105px}.lines .d{width:70px}
+.addbar{display:grid;grid-template-columns:1fr 100px auto;gap:8px;margin-bottom:12px}
+@media (max-width:600px){
+  .addbar{grid-template-columns:1fr 80px}
+  .addbar .btn{grid-column:1/-1}
+  table.lines thead{display:none}
+  table.lines tr{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px 8px;padding:10px 0;border-bottom:1px solid var(--bd)}
+  table.lines td{border:0;padding:0}
+  table.lines td.desc{grid-column:1/-1;font-weight:600}
+  table.lines td[data-l]{text-align:left}
+  table.lines td[data-l]::before{content:attr(data-l);display:block;font-size:11px;color:var(--mut)}
+  table.lines td.tot{grid-column:1/3;align-self:center;text-align:left!important;font-weight:700}
+  table.lines td.del{text-align:right}
+  .lines .q,.lines .p,.lines .d{width:100%}
+}
+.tot-row{display:flex;justify-content:space-between;padding:5px 0;font-size:14px}
+.tot-row.big{font-size:18px;font-weight:700;border-top:1px solid var(--bd);margin-top:6px;padding-top:10px}
+.tot-row.bs{font-size:16px;font-weight:700;color:var(--pri)}
+
+/* Modal & toast */
+#modal{position:fixed;inset:0;background:rgba(15,23,42,.45);display:flex;align-items:flex-start;justify-content:center;z-index:100;padding:5vh 12px;overflow:auto}
+#modal .box{background:#fff;border-radius:12px;width:100%;max-width:560px;padding:18px;box-shadow:0 20px 50px rgba(0,0,0,.25)}
+#modal .box h2{margin:0 0 14px;font-size:18px}
+#modal .acts{display:flex;justify-content:flex-end;gap:8px;margin-top:16px;flex-wrap:wrap}
+#toast{position:fixed;left:50%;bottom:90px;transform:translateX(-50%);background:#1c2430;color:#fff;padding:10px 16px;border-radius:8px;z-index:200;font-size:14px;max-width:90vw;box-shadow:0 6px 20px rgba(0,0,0,.2)}
+#toast.err{background:var(--err)}
+
+/* Login */
+#login{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;background:linear-gradient(135deg,var(--pri),#1d6fb3)}
+#login .box{background:#fff;border-radius:14px;padding:26px;width:100%;max-width:380px;box-shadow:0 20px 50px rgba(0,0,0,.25)}
+#login img{max-width:120px;max-height:70px;display:block;margin:0 auto 10px}
+#login h1{text-align:center;font-size:20px;margin:0 0 4px}
+#login p{text-align:center;margin:0 0 18px}
+#login form{display:flex;flex-direction:column;gap:12px}
+
+/* ---------- Documento de cotización ---------- */
+.doc-wrap{overflow-x:auto;background:#e9edf2;border-radius:var(--rad);padding:16px}
+.doc{background:#fff;width:800px;max-width:none;margin:0 auto;padding:34px 38px;color:#1a1a1a;font-size:12.5px;line-height:1.35;font-family:"Segoe UI",Roboto,Arial,sans-serif;--dc:#0f4c81}
+.doc .d-head{display:flex;justify-content:space-between;gap:20px;border-bottom:3px solid var(--dc);padding-bottom:14px}
+.doc .d-emp{display:flex;gap:14px;align-items:center}
+.doc .d-emp img{max-width:120px;max-height:80px;object-fit:contain}
+.doc .d-emp .n{font-size:18px;font-weight:700;color:var(--dc)}
+.doc .d-emp div div{color:#444}
+.doc .d-tit{text-align:right}
+.doc .d-tit .t{font-size:24px;font-weight:800;color:var(--dc);letter-spacing:.06em}
+.doc .d-tit .no{font-size:15px;font-weight:700;margin-top:2px}
+.doc .d-tit table{margin-left:auto;margin-top:6px;border-collapse:collapse}
+.doc .d-tit td{padding:1px 0 1px 10px;text-align:right}
+.doc .d-tit td:first-child{color:#666}
+.doc .d-cli{margin:16px 0;display:grid;grid-template-columns:1fr 1fr;gap:4px 24px;background:#f5f7fa;border-left:4px solid var(--dc);padding:10px 14px}
+.doc .d-cli .lb{color:#666;font-size:11px;text-transform:uppercase}
+.doc table.d-it{width:100%;border-collapse:collapse;margin-top:6px}
+.doc table.d-it th{background:var(--dc);color:#fff;font-size:11px;text-transform:uppercase;padding:7px 6px;text-align:left}
+.doc table.d-it td{padding:6px;border-bottom:1px solid #e3e6ea;vertical-align:top}
+.doc table.d-it tr:nth-child(even) td{background:#fafbfc}
+.doc .n{text-align:right;white-space:nowrap}
+.doc table.d-it th.n{text-align:right}
+.doc .d-foot{display:flex;justify-content:space-between;gap:24px;margin-top:14px}
+.doc .d-notes{flex:1;font-size:11.5px;color:#333}
+.doc .d-notes b{color:var(--dc)}
+.doc table.d-tot{border-collapse:collapse;min-width:280px}
+.doc table.d-tot td{padding:4px 8px}
+.doc table.d-tot td:last-child{text-align:right;white-space:nowrap}
+.doc table.d-tot tr.g td{font-size:15px;font-weight:800;background:var(--dc);color:#fff}
+.doc table.d-tot tr.bs td{font-size:14px;font-weight:700;color:var(--dc);border-top:1px solid #ccd}
+.doc .d-sign{margin-top:44px;display:flex;justify-content:space-between;gap:30px;font-size:11.5px}
+.doc .d-sign div{flex:1;border-top:1px solid #888;text-align:center;padding-top:4px;color:#555}
+.doc .d-bottom{margin-top:22px;text-align:center;font-size:10.5px;color:#777;border-top:1px solid #e3e6ea;padding-top:8px}
+
+#print-area{display:none}
+@media print{
+  @page{size:letter;margin:10mm}
+  body{background:#fff}
+  body>*:not(#print-area){display:none!important}
+  #print-area{display:block!important}
+  #print-area .doc{width:auto;padding:0;box-shadow:none}
+  .doc *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+}
+</style>
+</head>
+<body>
+
+<div id="login" class="hidden"></div>
+
+<div id="app" class="hidden">
+  <aside id="side">
+    <div class="brand"><img id="side-logo" alt="" class="hidden"><b id="side-name">Cotizador</b></div>
+    <nav id="side-nav"></nav>
+    <div class="foot"><div id="side-user"></div><button data-act="logout">Cambiar nombre</button></div>
+  </aside>
+  <div id="wrap">
+    <header id="top">
+      <h1 id="title">Cotizador</h1>
+      <span id="tasa-chip" class="chip" data-act="tasa" title="Tasa BCV del día">Bs/USD …</span>
+      <button class="btn sm" data-act="menu" aria-label="Mi nombre" id="user-btn">👤</button>
+    </header>
+    <main id="main"></main>
+  </div>
+  <nav id="bnav"></nav>
+</div>
+
+<div id="modal" class="hidden"><div class="box" id="modal-box"></div></div>
+<div id="toast" class="hidden"></div>
+<div id="print-area"></div>
+
+<script>
+'use strict';
+/* =========================================================
+   COTIZADOR — datos compartidos en Google Sheets (Apps Script)
+   ========================================================= */
+// Dirección del servidor (URL de la aplicación web de Apps Script que termina en /exec)
+const API_URL = 'https://script.google.com/macros/s/AKfycbzBztfVcAT_othSTnsW8V9v3pyCbGyOTuZvtn-R2-Cdu9Pllxodzt3qC0sN7raIpttI/exec';
+
+const LS = {
+  get(k){ try{ return localStorage.getItem(k); }catch(e){ return null; } },
+  set(k,v){ try{ localStorage.setItem(k,v); return true; }catch(e){ return false; } },
+  del(k){ try{ localStorage.removeItem(k); }catch(e){} }
+};
+(function captureApi(){
+  try{
+    const u = new URL(location.href), a = u.searchParams.get('api');
+    if(a && /^https:\/\/script\.google(usercontent)?\.com\//.test(a)){ LS.set('cotizador_api', a); u.searchParams.delete('api'); history.replaceState(null, '', u.pathname + u.search + u.hash); }
+  }catch(e){}
+})();
+let API = API_URL || LS.get('cotizador_api') || '';
+// Identificación del teléfono (sin usuario ni contraseña)
+let DEVICE = LS.get('cotizador_device'); if(!DEVICE){ DEVICE = Date.now().toString(36) + Math.random().toString(36).slice(2,8); LS.set('cotizador_device', DEVICE); }
+let VENDEDOR = LS.get('cotizador_vendedor') || '';
+const CACHE_KEY = () => 'cotizador_cache_' + (API.split('/s/')[1] || '').slice(0, 20);
+
+const LOGO_FERMETAL = 'data:image/jpeg;base64,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';
+function defaultConfig(){
+  return {
+    empresa:{ nombre:'Fermetal', rif:'', telefono:'', email:'', direccion:'', web:'', logo:LOGO_FERMETAL, color:'#b81920' },
+    ivaGeneral:16, ivaReducido:8, vigenciaDias:5, prefijo:'COT-', siguiente:1, digitos:5,
+    notas:'Precios expresados en dólares (USD). El monto en bolívares se calcula a la tasa oficial del BCV vigente a la fecha de la cotización. Precios sujetos a cambio sin previo aviso y a disponibilidad de inventario.',
+    tasa:{ valor:0, fecha:'', fuente:'' }
+  };
+}
+function mergeConfig(d){
+  d = d || {}; const def = defaultConfig();
+  const c = Object.assign(def, d);
+  c.empresa = Object.assign(defaultConfig().empresa, d.empresa || {});
+  c.tasa = Object.assign(defaultConfig().tasa, d.tasa || {});
+  return c;
+}
+function emptyDB(){ return { config:defaultConfig(), usuarios:[], clientes:[], productos:[], cotizaciones:[] }; }
+let DB = emptyDB();
+let USER = { id:DEVICE, nombre:VENDEDOR || 'Vendedor', rol:'admin' };
+let LAST_SYNC = 0, ONLINE = true, REV = '';
+
+/* ---------- Utilidades ---------- */
+const $ = s => document.querySelector(s);
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2,7);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const nf2 = new Intl.NumberFormat('es-VE',{minimumFractionDigits:2,maximumFractionDigits:2});
+const nf4 = new Intl.NumberFormat('es-VE',{minimumFractionDigits:2,maximumFractionDigits:4});
+const usd = n => '$ ' + nf2.format(+n||0);
+const bs  = n => 'Bs. ' + nf2.format(+n||0);
+const r2  = n => Math.round((+n + Number.EPSILON) * 100) / 100;
+const num = v => { if(typeof v === 'number') return isFinite(v) ? v : 0; let t = String(v ?? '').replace(/[^\d.,-]/g,''); if(t.includes(',') && t.includes('.')) t = t.lastIndexOf(',') > t.lastIndexOf('.') ? t.replace(/\./g,'').replace(',', '.') : t.replace(/,/g,''); else t = t.replace(',', '.'); const n = parseFloat(t); return isFinite(n) ? n : 0; };
+const plain = o => JSON.parse(JSON.stringify(o));
+function hoy(){ const d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+function addDays(iso, n){ const d=new Date(iso+'T12:00:00'); d.setDate(d.getDate()+(+n||0)); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+function fdate(iso){ if(!iso) return ''; const [y,m,d]=String(iso).slice(0,10).split('-'); return d ? `${d}/${m}/${y}` : String(iso); }
+const C = () => DB.config;
+const isAdmin = () => true;
+let toastT;
+function toast(msg, err){ const t=$('#toast'); t.textContent=msg; t.className=err?'err':''; clearTimeout(toastT); toastT=setTimeout(()=>t.className='hidden', err?5500:2600); }
+
+const ICON = {
+  nueva:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>',
+  hist:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6M8 13h8M8 17h5"/></svg>',
+  cli:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="8" r="4"/><path d="M2 21c0-4 3-7 7-7s7 3 7 7M17 4a4 4 0 0 1 0 8M22 21c0-3-2-5.5-4.5-6.5"/></svg>',
+  prod:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 8 12 3 3 8v8l9 5 9-5z"/><path d="m3 8 9 5 9-5M12 13v8"/></svg>',
+  conf:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"/></svg>',
+  print:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9V2h12v7M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><path d="M6 14h12v8H6z"/></svg>',
+  pdf:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>',
+  wa:'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2zm0 18.2c-1.5 0-3-.4-4.3-1.2l-.3-.2-3 .8.8-2.9-.2-.3A8.2 8.2 0 1 1 12 20.2zm4.5-6.1c-.2-.1-1.5-.7-1.7-.8-.2-.1-.4-.1-.6.1l-.8 1c-.1.2-.3.2-.5.1a6.7 6.7 0 0 1-3.3-2.9c-.3-.4.3-.4.7-1.3.1-.2 0-.3 0-.4l-.8-1.8c-.2-.5-.4-.4-.6-.4h-.5a1 1 0 0 0-.7.3 3 3 0 0 0-.9 2.2 5.1 5.1 0 0 0 1.1 2.7 11.7 11.7 0 0 0 4.5 4c1.7.7 2.3.8 3.2.6.5-.1 1.5-.6 1.7-1.2.2-.6.2-1.1.1-1.2l-.5-.3z"/></svg>'
+};
+
+/* ---------- Servidor ---------- */
+async function api(action, payload, opts){
+  opts = opts || {};
+  if(!API) throw new Error('Falta la dirección del servidor');
+  const body = JSON.stringify(Object.assign({ action, device:DEVICE, vendedor:USER.nombre }, payload || {}));
+  let r;
+  try{ r = await fetch(API, { method:'POST', body, redirect:'follow' }); }
+  catch(e){ setOnline(false); throw new Error('Sin conexión con el servidor. Revisa tu internet e intenta de nuevo.'); }
+  let j;
+  try{ j = await r.json(); }catch(e){ setOnline(false); throw new Error('El servidor no respondió correctamente. Verifica que la aplicación web de Apps Script esté implementada con acceso para "Cualquier usuario".'); }
+  setOnline(true);
+  if(!j.ok) throw new Error(j.error || 'Error del servidor');
+  return j;
+}
+function setOnline(v){ ONLINE = v; const s = $('#sync'); if(s){ s.textContent = v ? '' : 'Sin conexión'; s.classList.toggle('hidden', v); } }
+function applyData(d){
+  DB = { config:mergeConfig(d.config), usuarios:[], clientes:d.clientes||[], productos:d.productos||[], cotizaciones:d.cotizaciones||[] };
+  LAST_SYNC = Date.now();
+  saveCache();
+}
+function saveCache(){ try{ localStorage.setItem(CACHE_KEY(), JSON.stringify(Object.assign({ _rev:REV }, DB))); }catch(e){ /* sin espacio: la app sigue funcionando en línea */ } }
+function loadCache(){ try{ const d = JSON.parse(LS.get(CACHE_KEY()) || 'null'); if(d){ REV = d._rev || ''; DB = { config:mergeConfig(d.config), usuarios:d.usuarios||[], clientes:d.clientes||[], productos:d.productos||[], cotizaciones:d.cotizaciones||[] }; return true; } }catch(e){} return false; }
+async function refresh(silent){
+  try{
+    const j = await api('all', { rev:REV });
+    if(j.same){ LAST_SYNC = Date.now(); return true; }
+    if(!(j.data.config && j.data.config.empresa && j.data.config.empresa.nombre)){
+      // Primer uso: guarda en el servidor los datos de la empresa que trae la app
+      const d = defaultConfig(), logo = d.empresa.logo; delete d.empresa.logo;
+      const k = await api('init', { config:d, logo });
+      j.data.config = k.config;
+    }
+    REV = j.rev || ''; applyData(j.data);
+    return true;
+  }catch(e){ if(!silent) toast(e.message, true); return false; }
+}
+function upsertLocal(col, rec){ const i = DB[col].findIndex(x => x.id === rec.id); if(i >= 0) DB[col][i] = rec; else DB[col].push(rec); saveCache(); }
+function removeLocal(col, id){ DB[col] = DB[col].filter(x => x.id !== id); saveCache(); }
+async function saveRec(col, rec, nuevo){
+  const j = await api('put', { col, rec:plain(rec), nuevo:!!nuevo });
+  upsertLocal(col, j.rec);
+  if(col === 'cotizaciones' && nuevo) refresh(true);
+  return j.rec;
+}
+async function delRec(col, id){ await api('del', { col, id }); removeLocal(col, id); }
+async function busy(btn, fn){
+  const txt = btn ? btn.innerHTML : '';
+  if(btn){ btn.disabled = true; btn.textContent = 'Guardando…'; }
+  try{ return await fn(); }
+  catch(e){ toast(e.message, true); return undefined; }
+  finally{ if(btn && document.body.contains(btn)){ btn.disabled = false; btn.innerHTML = txt; } }
+}
+
+/* ---------- Conexión y nombre del vendedor ---------- */
+function renderApiSetup(){
+  $('#app').classList.add('hidden');
+  const L = $('#login'); L.classList.remove('hidden');
+  L.innerHTML = `<div class="box"><img src="${LOGO_FERMETAL}" alt=""><h1>Conectar con el servidor</h1>
+    <p class="muted small">Pega la dirección de la aplicación web de Apps Script (termina en <b>/exec</b>).</p>
+    <form id="af"><label class="f">Dirección del servidor<input type="text" name="api" placeholder="https://script.google.com/macros/s/…/exec" required autocapitalize="none"></label>
+    <button class="btn pri" type="submit">Conectar</button></form></div>`;
+  $('#af').onsubmit = ev => { ev.preventDefault(); const v = new FormData(ev.target).get('api').trim();
+    if(!/^https:\/\/script\.google(usercontent)?\.com\/.+/.test(v)) return toast('La dirección debe empezar por https://script.google.com/', true);
+    API = v; LS.set('cotizador_api', v); boot(); };
+}
+function askName(first){
+  modal(`<h2>${first?'¡Bienvenido!':'Tu nombre'}</h2>
+    <p class="small muted">${first?'Escribe tu nombre una sola vez. Aparecerá como vendedor en las cotizaciones que hagas desde este teléfono.':'Este nombre aparece como vendedor en tus cotizaciones.'}</p>
+    <form id="nf"><label class="f">Nombre y apellido<input type="text" name="n" value="${esc(VENDEDOR)}" required autocomplete="name"></label>
+    <div class="acts">${first?'':'<button type="button" class="btn" data-act="close">Cancelar</button>'}<button class="btn pri" type="submit">Guardar</button></div></form>`, b => {
+      b.querySelector('#nf').onsubmit = ev => { ev.preventDefault(); const n = String(new FormData(ev.target).get('n')).trim(); if(!n) return;
+        VENDEDOR = n; LS.set('cotizador_vendedor', n); USER.nombre = n; closeModal(); renderShell(); toast('Hola, ' + n); };
+    });
+}
+async function startApp(){
+  $('#login').classList.add('hidden'); $('#login').innerHTML='';
+  $('#app').classList.remove('hidden');
+  renderShell(); route();
+  if(!VENDEDOR) askName(true);
+}
+
+/* ---------- Shell / navegación ---------- */
+const NAV = [
+  {id:'nueva', t:'Nueva', full:'Nueva cotización', i:'nueva'},
+  {id:'historial', t:'Historial', full:'Historial', i:'hist'},
+  {id:'clientes', t:'Clientes', full:'Clientes', i:'cli'},
+  {id:'productos', t:'Productos', full:'Productos', i:'prod'},
+  {id:'ajustes', t:'Ajustes', full:'Configuración', i:'conf', admin:true}
+];
+function renderShell(){
+  const e = C().empresa;
+  document.documentElement.style.setProperty('--pri', e.color || '#0f4c81');
+  document.querySelector('meta[name=theme-color]').content = e.color || '#0f4c81';
+  document.title = (e.nombre ? e.nombre + ' · ' : '') + 'Cotizador';
+  const img = $('#side-logo'); if(e.logo){ img.src=e.logo; img.classList.remove('hidden'); } else img.classList.add('hidden');
+  $('#side-name').textContent = e.nombre || 'Cotizador';
+  $('#side-user').textContent = USER.nombre;
+  const items = NAV.filter(n => !n.admin || isAdmin());
+  $('#side-nav').innerHTML = items.map(n => `<button class="nav-btn" data-nav="${n.id}">${ICON[n.i]}<span>${n.full}</span></button>`).join('');
+  $('#bnav').innerHTML = items.map(n => `<button class="nav-btn" data-nav="${n.id}">${ICON[n.i]}<span>${n.t}</span></button>`).join('');
+  setActive(currentView());
+  renderTasaChip();
+}
+function currentView(){ const v = (location.hash.replace(/^#\/?/,'') || 'historial').split('/')[0]; return v==='editar'?'nueva': v==='ver'?'historial': v; }
+function setActive(id){ document.querySelectorAll('[data-nav]').forEach(b => b.classList.toggle('on', b.dataset.nav === id)); }
+function renderTasaChip(){
+  const t = C().tasa, ch = $('#tasa-chip');
+  ch.textContent = t.valor ? `BCV ${nf4.format(t.valor)}` : 'Tasa BCV: definir';
+  ch.classList.toggle('old', !t.valor || t.fecha !== hoy());
+  ch.title = t.valor ? `Tasa BCV ${nf4.format(t.valor)} Bs/USD — actualizada ${fdate(t.fecha)} (${t.fuente||'manual'})` : 'Toca para definir la tasa';
+}
+function go(h){ if(location.hash === h) route(); else location.hash = h; }
+window.addEventListener('hashchange', () => route());
+let editorDirty = false;
+function route(soft){
+  const [view, id] = (location.hash.replace(/^#\/?/,'') || 'historial').split('/');
+  const titles = {nueva:'Nueva cotización', editar:'Editar cotización', ver:'Cotización', historial:'Historial de cotizaciones', clientes:'Clientes', productos:'Productos', ajustes:'Configuración'};
+  if(view==='ajustes' && !isAdmin()) return go('#/historial');
+  $('#title').textContent = titles[view] || 'Cotizador';
+  setActive(view==='editar'?'nueva': view==='ver'?'historial': view);
+  if(!soft){ editorDirty = false; window.scrollTo(0,0); }
+  ({nueva:()=>viewEditor(), editar:()=>viewEditor(id), ver:()=>viewQuote(id), historial:viewHistorial, clientes:viewClientes, productos:viewProductos, ajustes:viewAjustes}[view] || viewHistorial)();
+}
+/* Sincronización con el equipo: refresca cada 45 s y al volver a la app */
+function canAutoRefresh(){
+  const v = currentView(); const a = document.activeElement;
+  return !editorDirty && v !== 'nueva' && v !== 'ajustes' && $('#modal').classList.contains('hidden') && !(a && /INPUT|TEXTAREA|SELECT/.test(a.tagName));
+}
+async function backgroundSync(){
+  if(document.hidden || !canAutoRefresh()) return;
+  const before = JSON.stringify(DB);
+  if(await refresh(true) && JSON.stringify(DB) !== before && canAutoRefresh()){ renderShell(); route(true); }
+}
+setInterval(backgroundSync, 45000);
+document.addEventListener('visibilitychange', () => { if(!document.hidden && Date.now() - LAST_SYNC > 15000) backgroundSync(); });
+
+/* ---------- Modal ---------- */
+function modal(html, onMount){ $('#modal-box').innerHTML = html; $('#modal').classList.remove('hidden'); if(onMount) onMount($('#modal-box')); const f=$('#modal-box').querySelector('input,select,textarea'); if(f && window.innerWidth>820) f.focus(); }
+function closeModal(){ $('#modal').classList.add('hidden'); $('#modal-box').innerHTML=''; }
+$('#modal').addEventListener('mousedown', e => { if(e.target.id==='modal') closeModal(); });
+function confirmBox(msg, ok){ modal(`<h2>Confirmar</h2><p>${msg}</p><div class="acts"><button class="btn" data-act="close">Cancelar</button><button class="btn pri" id="cf-ok">Aceptar</button></div>`, b => b.querySelector('#cf-ok').onclick = () => { closeModal(); ok(); }); }
+
+/* ---------- Tasa BCV ---------- */
+const TASA_SOURCES = [
+  { url:'https://ve.dolarapi.com/v1/dolares/oficial', parse:j => ({ valor:+j.promedio, fuente:'BCV · dolarapi.com' }) },
+  { url:'https://pydolarve.org/api/v2/dollar?page=bcv', parse:j => ({ valor:+(j.monitors?.usd?.price), fuente:'BCV · pydolarve.org' }) }
+];
+async function fetchTasa(){
+  for(const s of TASA_SOURCES){
+    try{
+      const ctl = new AbortController(); const tm = setTimeout(()=>ctl.abort(), 8000);
+      const r = await fetch(s.url, {cache:'no-store', signal:ctl.signal}); clearTimeout(tm);
+      if(!r.ok) continue;
+      const d = s.parse(await r.json());
+      if(d.valor > 0){ return await saveTasa({ valor:Math.round(d.valor*10000)/10000, fecha:hoy(), fuente:d.fuente }); }
+    }catch(e){ console.warn('Tasa', s.url, e); }
+  }
+  throw new Error('No se pudo obtener la tasa');
+}
+async function saveTasa(t){ const j = await api('tasa', { tasa:t }); C().tasa = j.tasa; saveCache(); renderTasaChip(); return j.tasa; }
+async function autoTasa(){
+  if(LS.get('cotizador_autotasa') !== '0' && C().tasa.fecha !== hoy()){
+    try{ await fetchTasa(); toast('Tasa BCV actualizada: ' + nf4.format(C().tasa.valor)); }
+    catch(e){ toast('No se pudo obtener la tasa BCV automáticamente. Defínela tocando el indicador de arriba.', true); }
+  }
+}
+function tasaModal(){
+  const t = C().tasa;
+  modal(`<h2>Tasa oficial BCV (Bs por USD)</h2>
+    <p class="small muted">Actual: <b>${t.valor?nf4.format(t.valor):'—'}</b> ${t.fecha?`· ${fdate(t.fecha)} · ${esc(t.fuente||'manual')}`:''}</p>
+    <label class="f">Tasa manual<input type="number" step="0.0001" min="0" id="tm-v" value="${t.valor||''}" inputmode="decimal"></label>
+    <p class="small muted">La tasa se comparte con todo el equipo.</p>
+    <div class="acts">
+      <button class="btn" id="tm-f">↻ Consultar BCV</button>
+      <button class="btn" data-act="close">Cerrar</button>
+      <button class="btn pri" id="tm-s">Guardar manual</button>
+    </div>`, b => {
+      b.querySelector('#tm-f').onclick = async ev => { const btn = ev.currentTarget; btn.disabled=true; btn.textContent='Consultando…';
+        try{ const r = await fetchTasa(); toast('Tasa actualizada: ' + nf4.format(r.valor)); closeModal(); route(true); }
+        catch(e){ toast('No se pudo consultar. Revisa tu conexión o escríbela manualmente.', true); btn.disabled=false; btn.textContent='↻ Consultar BCV'; } };
+      b.querySelector('#tm-s').onclick = ev => { const v = num(b.querySelector('#tm-v').value); if(v<=0) return toast('Escribe una tasa mayor que cero', true);
+        busy(ev.currentTarget, async () => { await saveTasa({ valor:v, fecha:hoy(), fuente:'Manual · '+USER.nombre }); closeModal(); toast('Tasa guardada'); route(true); }); };
+    });
+}
+
+/* ---------- Cálculos ---------- */
+function rateOf(tipo, q){ return tipo==='E' ? 0 : tipo==='R' ? (+q.ivaReducido||0) : (+q.ivaGeneral||0); }
+function calc(q){
+  let bruto=0, desc=0; const bases = {};
+  for(const it of (q.items||[])){
+    const b = r2(num(it.cantidad) * num(it.precio));
+    const d = r2(b * num(it.descuento) / 100);
+    bruto += b; desc += d;
+    const r = rateOf(it.ivaTipo, q);
+    bases[r] = (bases[r]||0) + (b - d);
+  }
+  let iva = 0; const ivas = {};
+  Object.keys(bases).forEach(r => { ivas[r] = r2(bases[r] * r / 100); iva += ivas[r]; });
+  const neto = r2(bruto - desc), total = r2(neto + iva);
+  return { bruto:r2(bruto), desc:r2(desc), neto, bases, ivas, iva:r2(iva), total, totalBs: r2(total * (+q.tasa||0)) };
+}
+function lineTotal(it){ const b = r2(num(it.cantidad)*num(it.precio)); return r2(b - r2(b*num(it.descuento)/100)); }
+function estadoDe(q){ if(q.estado==='Pendiente' && q.vence && q.vence < hoy()) return 'Vencida'; return q.estado || 'Pendiente'; }
+function numero(n){ return (C().prefijo||'') + String(n).padStart(+C().digitos||1, '0'); }
+const canTouch = q => true;
+
+/* ---------- Editor de cotización ---------- */
+let draft = null;
+function newDraft(){
+  const c = C(), f = hoy();
+  return { id:null, numero:'', fecha:f, vigenciaDias:+c.vigenciaDias||0, vence:addDays(f, c.vigenciaDias), clienteId:'', cliente:null,
+    items:[], tasa:+c.tasa.valor||0, ivaGeneral:+c.ivaGeneral, ivaReducido:+c.ivaReducido, notas:c.notas, estado:'Pendiente',
+    usuario:USER.nombre, usuarioId:USER.id, _from:'nueva' };
+}
+function viewEditor(id){
+  if(id){
+    const q = DB.cotizaciones.find(x => x.id === id);
+    if(!q){ toast('Cotización no encontrada', true); return go('#/historial'); }
+    if(!canTouch(q)){ toast('Solo puedes editar tus propias cotizaciones', true); return go('#/ver/'+id); }
+    if(!draft || draft.id !== id) draft = plain(q);
+  } else if(!draft || draft.id || draft._from !== 'nueva'){ draft = newDraft(); }
+  const prodOpts = DB.productos.map(p => `<option value="${esc(p.codigo)} · ${esc(p.descripcion)}">`).join('');
+  const cliOpts = [...DB.clientes].sort((a,b)=>String(a.nombre).localeCompare(String(b.nombre))).map(c => `<option value="${esc(c.id)}" ${draft.clienteId===c.id?'selected':''}>${esc(c.nombre)} — ${esc(c.rif)}</option>`).join('');
+  $('#main').innerHTML = `
+  <div class="ed-grid">
+    <div style="min-width:0">
+      <div class="card">
+        <h2>Cliente</h2>
+        <div class="row">
+          <label class="f" style="flex:3 1 260px">Seleccionar cliente
+            <select id="e-cli"><option value="">— Selecciona —</option>${cliOpts}</select></label>
+          <div style="flex:0 0 auto"><button class="btn" id="e-newcli">+ Nuevo cliente</button></div>
+        </div>
+        <div id="e-cli-info" class="small muted" style="margin-top:8px"></div>
+      </div>
+      <div class="card">
+        <h2>Productos</h2>
+        ${DB.productos.length ? `
+        <div class="addbar">
+          <input type="search" id="e-ps" list="e-pl" placeholder="Buscar por código o descripción…" autocomplete="off">
+          <datalist id="e-pl">${prodOpts}</datalist>
+          <input type="number" id="e-pq" value="1" min="0" step="any" aria-label="Cantidad" inputmode="decimal">
+          <button class="btn pri" id="e-padd">Agregar</button>
+        </div>` : `<p class="muted">No hay productos registrados. ${isAdmin()?'<a href="#/productos">Crea tus productos</a> primero.':'Pide al administrador que cargue los productos.'}</p>`}
+        <div class="tbl-wrap"><table class="t lines"><thead><tr>
+          <th>Descripción</th><th class="num">Cant.</th><th class="num">Precio USD</th><th class="num">Desc. %</th><th class="num">Total USD</th><th></th>
+        </tr></thead><tbody id="e-lines"></tbody></table></div>
+      </div>
+      <div class="card">
+        <h2>Notas y condiciones</h2>
+        <textarea id="e-notas" rows="4">${esc(draft.notas)}</textarea>
+      </div>
+    </div>
+    <div class="ed-side">
+      <div class="card">
+        <h2>${draft.numero ? esc(draft.numero) : 'N° ' + esc(numero(C().siguiente)) + ' <span class="small muted">(se confirma al guardar)</span>'}</h2>
+        <div class="grid2" style="grid-template-columns:1fr 1fr">
+          <label class="f">Fecha<input type="date" id="e-fecha" value="${draft.fecha}"></label>
+          <label class="f">Vigencia (días)<input type="number" id="e-vig" min="0" value="${draft.vigenciaDias}"></label>
+          <label class="f">Válida hasta<input type="date" id="e-vence" value="${draft.vence}"></label>
+          <label class="f">Estado<select id="e-est">${['Pendiente','Aprobada','Rechazada'].map(s=>`<option ${draft.estado===s?'selected':''}>${s}</option>`).join('')}</select></label>
+          <label class="f" style="grid-column:1/-1">Tasa BCV (Bs/USD)<input type="number" id="e-tasa" step="0.0001" min="0" value="${draft.tasa||''}" inputmode="decimal"></label>
+        </div>
+        <div id="e-tot" style="margin-top:12px"></div>
+        <div class="btns" style="margin-top:14px">
+          <button class="btn pri" id="e-save" style="flex:1">Guardar</button>
+          <button class="btn" id="e-cancel">Cancelar</button>
+        </div>
+      </div>
+    </div>
+  </div>`;
+  const sel = $('#e-cli');
+  sel.onchange = () => { draft.clienteId = sel.value; editorDirty = true; cliInfo(); };
+  $('#e-newcli').onclick = () => clienteForm(null, c => { draft.clienteId = c.id; viewEditor(draft.id); });
+  const bind = (idSel, key, fn) => $(idSel).addEventListener('input', e => { draft[key] = fn ? fn(e.target.value) : e.target.value; editorDirty = true; if(key==='fecha'||key==='vigenciaDias'){ draft.vence = addDays(draft.fecha, draft.vigenciaDias); $('#e-vence').value = draft.vence; } renderTotals(); });
+  bind('#e-fecha','fecha'); bind('#e-vig','vigenciaDias', v=>+v||0); bind('#e-vence','vence'); bind('#e-tasa','tasa', num); bind('#e-notas','notas');
+  $('#e-est').onchange = e => { draft.estado = e.target.value; editorDirty = true; };
+  if($('#e-padd')){
+    const add = () => {
+      const v = $('#e-ps').value.trim(); if(!v) return;
+      const code = v.split(' · ')[0].trim().toLowerCase();
+      let p = DB.productos.find(x => String(x.codigo).toLowerCase() === code);
+      if(!p){ const m = DB.productos.filter(x => (x.codigo+' '+x.descripcion).toLowerCase().includes(v.toLowerCase())); if(m.length===1) p=m[0]; else return toast(m.length?'Varios productos coinciden; elige uno de la lista':'Producto no encontrado', true); }
+      const q = num($('#e-pq').value) || 1;
+      const ex = draft.items.find(i => i.productoId === p.id && !num(i.descuento));
+      if(ex) ex.cantidad = num(ex.cantidad) + q;
+      else draft.items.push({ productoId:p.id, codigo:p.codigo, descripcion:p.descripcion, unidad:p.unidad, cantidad:q, precio:num(p.precio), descuento:0, ivaTipo:p.ivaTipo||'G' });
+      editorDirty = true; $('#e-ps').value=''; $('#e-pq').value=1; renderLines(); $('#e-ps').focus();
+    };
+    $('#e-padd').onclick = add;
+    $('#e-ps').addEventListener('keydown', e => { if(e.key==='Enter'){ e.preventDefault(); add(); } });
+    $('#e-pq').addEventListener('keydown', e => { if(e.key==='Enter'){ e.preventDefault(); add(); } });
+  }
+  $('#e-save').onclick = saveDraft;
+  $('#e-cancel').onclick = () => { const back = draft.id ? '#/ver/'+draft.id : '#/historial'; draft = null; editorDirty = false; go(back); };
+  cliInfo(); renderLines();
+}
+function cliInfo(){
+  const c = DB.clientes.find(x => x.id === draft.clienteId);
+  $('#e-cli-info').innerHTML = c ? [c.contacto&&'Contacto: '+esc(c.contacto), c.telefono&&'Tel: '+esc(c.telefono), c.email&&esc(c.email), c.condicion&&'Pago: <b>'+esc(c.condicion)+'</b>'].filter(Boolean).join(' · ') : '';
+}
+function renderLines(){
+  const tb = $('#e-lines');
+  if(!draft.items.length){ tb.innerHTML = `<tr><td colspan="6" class="empty">Agrega productos a la cotización</td></tr>`; renderTotals(); return; }
+  tb.innerHTML = draft.items.map((it,i) => `<tr>
+    <td class="desc"><div>${esc(it.descripcion)}</div><div class="small muted">${esc(it.codigo)} · ${esc(it.unidad||'')}${it.ivaTipo==='E'?' · Exento':it.ivaTipo==='R'?' · IVA reducido':''}</div></td>
+    <td class="num" data-l="Cant."><input class="q" type="number" step="any" min="0" data-i="${i}" data-k="cantidad" value="${it.cantidad}" inputmode="decimal"></td>
+    <td class="num" data-l="Precio USD"><input class="p" type="number" step="0.01" min="0" data-i="${i}" data-k="precio" value="${it.precio}" inputmode="decimal"></td>
+    <td class="num" data-l="Desc. %"><input class="d" type="number" step="0.01" min="0" max="100" data-i="${i}" data-k="descuento" value="${it.descuento||0}" inputmode="decimal"></td>
+    <td class="num tot" id="lt-${i}">${usd(lineTotal(it))}</td>
+    <td class="del"><button class="btn sm danger" data-del="${i}" aria-label="Quitar">✕</button></td></tr>`).join('');
+  tb.querySelectorAll('input').forEach(inp => inp.addEventListener('input', e => {
+    const i = +e.target.dataset.i; draft.items[i][e.target.dataset.k] = num(e.target.value); editorDirty = true;
+    $('#lt-'+i).textContent = usd(lineTotal(draft.items[i])); renderTotals(); }));
+  tb.querySelectorAll('[data-del]').forEach(b => b.onclick = () => { draft.items.splice(+b.dataset.del,1); editorDirty = true; renderLines(); });
+  renderTotals();
+}
+function totalsHTML(q, t){
+  let h = `<div class="tot-row"><span>Subtotal</span><span>${usd(t.bruto)}</span></div>`;
+  if(t.desc) h += `<div class="tot-row"><span>Descuento</span><span>- ${usd(t.desc)}</span></div>`;
+  Object.keys(t.bases).sort((a,b)=>b-a).forEach(r => {
+    if(+r===0) h += `<div class="tot-row"><span>Exento</span><span>${usd(t.bases[r])}</span></div>`;
+    else h += `<div class="tot-row"><span>IVA ${nf2.format(r)}% s/ ${usd(t.bases[r])}</span><span>${usd(t.ivas[r])}</span></div>`;
+  });
+  h += `<div class="tot-row big"><span>Total USD</span><span>${usd(t.total)}</span></div>`;
+  h += q.tasa ? `<div class="tot-row bs"><span>Total Bs</span><span>${bs(t.totalBs)}</span></div><div class="small muted right">Tasa BCV ${nf4.format(q.tasa)}</div>`
+              : `<div class="small" style="color:var(--warn)">Define la tasa BCV para calcular el monto en Bs.</div>`;
+  return h;
+}
+function renderTotals(){ const el=$('#e-tot'); if(el) el.innerHTML = totalsHTML(draft, calc(draft)); }
+function saveDraft(){
+  const c = DB.clientes.find(x => x.id === draft.clienteId);
+  if(!c) return toast('Selecciona un cliente', true);
+  if(!draft.items.length) return toast('Agrega al menos un producto', true);
+  if(!draft.fecha) return toast('Indica la fecha', true);
+  busy($('#e-save'), async () => {
+    const q = plain(draft); delete q._from;
+    q.cliente = { id:c.id, rif:c.rif, nombre:c.nombre, contacto:c.contacto||'', telefono:c.telefono||'', email:c.email||'', direccion:c.direccion||'', condicion:c.condicion||'' };
+    const t = calc(q); q.total = t.total; q.totalBs = t.totalBs;
+    const saved = await saveRec('cotizaciones', q, !q.id);
+    draft = null; editorDirty = false;
+    toast('Cotización ' + saved.numero + ' guardada'); go('#/ver/'+saved.id);
+  });
+}
+
+/* ---------- Documento (vista / impresión / PDF) ---------- */
+function docHTML(q){
+  const e = C().empresa, t = calc(q), cl = q.cliente || {};
+  const rows = (q.items||[]).map((it,i) => `<tr><td>${i+1}</td><td>${esc(it.codigo)}</td><td>${esc(it.descripcion)}${it.ivaTipo==='E'?' <i>(E)</i>':''}</td><td>${esc(it.unidad||'')}</td>
+    <td class="n">${nf2.format(it.cantidad)}</td><td class="n">${nf2.format(it.precio)}</td>${t.desc?`<td class="n">${it.descuento?nf2.format(it.descuento)+'%':''}</td>`:''}<td class="n">${nf2.format(lineTotal(it))}</td></tr>`).join('');
+  let tot = `<tr><td>Subtotal</td><td>${usd(t.bruto)}</td></tr>`;
+  if(t.desc) tot += `<tr><td>Descuento</td><td>- ${usd(t.desc)}</td></tr>`;
+  Object.keys(t.bases).sort((a,b)=>b-a).forEach(r => {
+    if(+r===0) tot += `<tr><td>Exento (E)</td><td>${usd(t.bases[r])}</td></tr>`;
+    else tot += `<tr><td>Base imponible ${nf2.format(r)}%</td><td>${usd(t.bases[r])}</td></tr><tr><td>IVA ${nf2.format(r)}%</td><td>${usd(t.ivas[r])}</td></tr>`;
+  });
+  tot += `<tr class="g"><td>TOTAL USD</td><td>${usd(t.total)}</td></tr>`;
+  if(q.tasa) tot += `<tr class="bs"><td>TOTAL Bs<br><span style="font-weight:400;font-size:11px;color:#666">Tasa BCV ${nf4.format(q.tasa)}</span></td><td>${bs(t.totalBs)}</td></tr>`;
+  return `<div class="doc" style="--dc:${esc(e.color||'#0f4c81')}">
+    <div class="d-head">
+      <div class="d-emp">${e.logo?`<img src="${e.logo}" alt="">`:''}<div>
+        <div class="n">${esc(e.nombre)}</div><div><b>RIF:</b> ${esc(e.rif)}</div>
+        ${e.direccion?`<div>${esc(e.direccion)}</div>`:''}
+        <div>${[e.telefono&&'Tel: '+esc(e.telefono), e.email&&esc(e.email), e.web&&esc(e.web)].filter(Boolean).join(' · ')}</div></div></div>
+      <div class="d-tit"><div class="t">COTIZACIÓN</div><div class="no">N° ${esc(q.numero||'(borrador)')}</div>
+        <table><tr><td>Fecha:</td><td><b>${fdate(q.fecha)}</b></td></tr><tr><td>Válida hasta:</td><td><b>${fdate(q.vence)}</b></td></tr>${q.usuario?`<tr><td>Vendedor:</td><td>${esc(q.usuario)}</td></tr>`:''}</table></div>
+    </div>
+    <div class="d-cli">
+      <div><div class="lb">Cliente</div><b>${esc(cl.nombre)}</b></div>
+      <div><div class="lb">RIF / C.I.</div>${esc(cl.rif)}</div>
+      ${cl.direccion?`<div style="grid-column:1/-1"><div class="lb">Dirección</div>${esc(cl.direccion)}</div>`:''}
+      <div><div class="lb">Contacto</div>${esc([cl.contacto, cl.telefono].filter(Boolean).join(' · ')||'—')}</div>
+      <div><div class="lb">Email</div>${esc(cl.email||'—')}</div>
+      <div><div class="lb">Condiciones de pago</div>${esc(cl.condicion||'—')}</div>
+    </div>
+    <table class="d-it"><thead><tr><th>#</th><th>Código</th><th>Descripción</th><th>Und.</th><th class="n">Cant.</th><th class="n">Precio USD</th>${t.desc?'<th class="n">Desc.</th>':''}<th class="n">Total USD</th></tr></thead><tbody>${rows}</tbody></table>
+    <div class="d-foot">
+      <div class="d-notes">${q.notas?`<b>Notas y condiciones</b><div style="white-space:pre-wrap;margin-top:4px">${esc(q.notas)}</div>`:''}</div>
+      <table class="d-tot">${tot}</table>
+    </div>
+    <div class="d-sign"><div>Elaborado por${q.usuario?': '+esc(q.usuario):''}</div><div>Aceptado por el cliente (firma y sello)</div></div>
+    <div class="d-bottom">${esc(e.nombre)} · RIF ${esc(e.rif)}${e.telefono?' · '+esc(e.telefono):''}${e.email?' · '+esc(e.email):''}</div>
+  </div>`;
+}
+function viewQuote(id){
+  const q = DB.cotizaciones.find(x => x.id === id);
+  if(!q){ toast('Cotización no encontrada', true); return go('#/historial'); }
+  const st = estadoDe(q);
+  $('#title').textContent = 'Cotización ' + q.numero;
+  $('#main').innerHTML = `
+    <div class="card">
+      <div class="toolbar" style="margin:0;justify-content:space-between">
+        <div><b>${esc(q.numero)}</b> · ${esc(q.cliente?.nombre)} <span class="badge ${st}">${st}</span></div>
+        <div class="btns">
+          <button class="btn" data-q="print">${ICON.print} Imprimir</button>
+          <button class="btn" data-q="pdf">${ICON.pdf} PDF</button>
+          <button class="btn ok" data-q="wa">${ICON.wa} WhatsApp</button>
+          ${canTouch(q)?`<button class="btn" data-q="edit">Editar</button>`:''}
+          <button class="btn" data-q="dup">Duplicar</button>
+          ${canTouch(q)?`<select id="q-est" style="width:auto" aria-label="Estado">${['Pendiente','Aprobada','Rechazada'].map(s=>`<option ${q.estado===s?'selected':''}>${s}</option>`).join('')}</select>`:''}
+        </div>
+      </div>
+    </div>
+    <div class="doc-wrap">${docHTML(q)}</div>`;
+  $('#main').querySelectorAll('[data-q]').forEach(b => b.onclick = () => quoteAction(b.dataset.q, q));
+  fitDoc();
+  const es = $('#q-est');
+  if(es) es.onchange = async e => {
+    const n = Object.assign(plain(q), { estado:e.target.value }); es.disabled = true;
+    try{ await saveRec('cotizaciones', n, false); toast('Estado actualizado'); viewQuote(id); }
+    catch(err){ toast(err.message, true); es.disabled = false; es.value = q.estado; }
+  };
+}
+function fitDoc(){ const w = $('.doc-wrap'), d = w && w.querySelector('.doc'); if(!d) return; const avail = w.clientWidth - 32; d.style.zoom = avail < 800 ? String(Math.max(0.4, avail/800)) : ''; }
+window.addEventListener('resize', () => { if(currentView()==='historial' && location.hash.startsWith('#/ver/')) fitDoc(); });
+function quoteAction(a, q){
+  if(a==='print') return printQuote(q);
+  if(a==='pdf') return pdfQuote(q);
+  if(a==='wa') return waQuote(q);
+  if(a==='edit'){ draft = null; return go('#/editar/'+q.id); }
+  if(a==='dup'){
+    const d = plain(q); const c = C();
+    Object.assign(d, { id:null, numero:'', fecha:hoy(), vence:addDays(hoy(), d.vigenciaDias||c.vigenciaDias), estado:'Pendiente', tasa:+c.tasa.valor||d.tasa, usuario:USER.nombre, usuarioId:USER.id, _from:'nueva' });
+    delete d.creado; delete d.modificado;
+    draft = d; toast('Copia creada: revisa y guarda'); return go('#/nueva');
+  }
+  if(a==='del') return confirmBox(`¿Eliminar la cotización <b>${esc(q.numero)}</b>? Esta acción no se puede deshacer.`, async () => {
+    try{ await delRec('cotizaciones', q.id); toast('Cotización eliminada'); route(true); }catch(e){ toast(e.message, true); } });
+}
+function printQuote(q){
+  const pa = $('#print-area'); pa.innerHTML = docHTML(q);
+  const imgs = [...pa.querySelectorAll('img')];
+  Promise.all(imgs.map(i => i.complete ? 0 : new Promise(r => { i.onload = i.onerror = r; }))).then(() => {
+    const prev = document.title; document.title = q.numero + ' - ' + (q.cliente?.nombre||'');
+    window.print(); document.title = prev;
+  });
+}
+let html2pdfLoading;
+function loadHtml2pdf(){
+  if(window.html2pdf) return Promise.resolve();
+  if(html2pdfLoading) return html2pdfLoading;
+  html2pdfLoading = new Promise((res, rej) => {
+    const s = document.createElement('script');
+    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js';
+    s.onload = res; s.onerror = () => { html2pdfLoading = null; rej(new Error('No se pudo cargar el generador de PDF (requiere internet)')); };
+    document.head.appendChild(s);
+  });
+  return html2pdfLoading;
+}
+async function makePdfBlob(q){
+  await loadHtml2pdf();
+  const holder = document.createElement('div'); holder.innerHTML = docHTML(q);
+  const el = holder.firstElementChild; el.style.width = '780px'; el.style.padding = '10px 14px';
+  return await html2pdf().set({
+    margin:[8,8,8,8], filename:q.numero+'.pdf', image:{type:'jpeg', quality:0.96},
+    html2canvas:{scale:2, useCORS:true, backgroundColor:'#ffffff'},
+    jsPDF:{unit:'mm', format:'letter', orientation:'portrait'}, pagebreak:{mode:['css','legacy'], avoid:'tr'}
+  }).from(el).outputPdf('blob');
+}
+function fileName(q){ return (q.numero + ' ' + (q.cliente?.nombre||'')).replace(/[\\/:*?"<>|]+/g,'').trim().slice(0,80) + '.pdf'; }
+async function pdfQuote(q){
+  toast('Generando PDF…');
+  try{
+    const blob = await makePdfBlob(q);
+    download(fileName(q), blob);
+    toast('PDF descargado');
+  }catch(e){ console.error(e); toast(e.message + '. Usa "Imprimir" → Guardar como PDF.', true); }
+}
+function waPhone(tel){
+  let d = String(tel||'').replace(/\D/g,'');
+  if(!d) return '';
+  if(d.startsWith('00')) d = d.slice(2);
+  if(d.startsWith('0')) d = '58' + d.slice(1);
+  else if(d.length === 10 && d.startsWith('4')) d = '58' + d;
+  return d;
+}
+function waText(q){
+  const e = C().empresa, t = calc(q);
+  let s = `*COTIZACIÓN N° ${q.numero}*\n${e.nombre} · RIF ${e.rif}\n\nCliente: ${q.cliente?.nombre}\nFecha: ${fdate(q.fecha)} · Válida hasta: ${fdate(q.vence)}\n\n`;
+  (q.items||[]).forEach(it => { s += `• ${nf2.format(it.cantidad)} ${it.unidad||''} ${it.descripcion} — ${usd(lineTotal(it))}\n`; });
+  s += `\nSubtotal: ${usd(t.bruto)}\n`;
+  if(t.desc) s += `Descuento: -${usd(t.desc)}\n`;
+  Object.keys(t.ivas).filter(r=>+r>0).forEach(r => s += `IVA ${nf2.format(r)}%: ${usd(t.ivas[r])}\n`);
+  s += `*Total: ${usd(t.total)}*\n`;
+  if(q.tasa) s += `Total Bs: ${bs(t.totalBs)} (tasa BCV ${nf4.format(q.tasa)})\n`;
+  if(q.cliente?.condicion) s += `Condición de pago: ${q.cliente.condicion}\n`;
+  return s;
+}
+function waQuote(q){
+  const phone = waPhone(q.cliente?.telefono);
+  const canFiles = !!(navigator.canShare && window.File && (()=>{ try{ return navigator.canShare({files:[new File(['x'],'t.pdf',{type:'application/pdf'})]}); }catch(e){ return false; } })());
+  modal(`<h2>Enviar por WhatsApp</h2>
+    <p class="small muted">Cliente: <b>${esc(q.cliente?.nombre)}</b> · Tel: ${esc(q.cliente?.telefono||'sin teléfono')}</p>
+    <label class="f">Número WhatsApp (con código de país)<input type="tel" id="wa-n" value="${esc(phone)}" placeholder="584141234567"></label>
+    <div class="btns" style="flex-direction:column;margin-top:14px">
+      ${canFiles?`<button class="btn ok" id="wa-pdf">${ICON.wa} Compartir PDF (elige WhatsApp)</button>`:''}
+      <button class="btn ${canFiles?'':'ok'}" id="wa-txt">${ICON.wa} Enviar resumen como mensaje</button>
+      ${!canFiles?`<button class="btn" id="wa-dl">${ICON.pdf} Descargar PDF para adjuntarlo</button>`:''}
+    </div>
+    <p class="small muted">${canFiles?'En el celular, "Compartir PDF" adjunta el archivo directamente.':'En computadora: envía el resumen y adjunta el PDF descargado en WhatsApp Web.'}</p>
+    <div class="acts"><button class="btn" data-act="close">Cerrar</button></div>`, b => {
+      b.querySelector('#wa-txt').onclick = () => {
+        const n = waPhone(b.querySelector('#wa-n').value);
+        window.open(`https://wa.me/${n}?text=${encodeURIComponent(waText(q))}`, '_blank');
+      };
+      const dl = b.querySelector('#wa-dl'); if(dl) dl.onclick = () => pdfQuote(q);
+      const sp = b.querySelector('#wa-pdf');
+      if(sp) sp.onclick = async () => {
+        sp.disabled = true; sp.textContent = 'Generando PDF…';
+        try{
+          const blob = await makePdfBlob(q);
+          const file = new File([blob], fileName(q), {type:'application/pdf'});
+          sp.disabled = false; sp.innerHTML = ICON.wa + ' PDF listo — tocar para compartir';
+          sp.onclick = async () => {
+            try{ await navigator.share({ files:[file], title:'Cotización '+q.numero, text:`Cotización ${q.numero} - ${C().empresa.nombre}` }); closeModal(); }
+            catch(e){ if(e.name!=='AbortError') toast('No se pudo compartir: ' + e.message, true); }
+          };
+        }catch(e){ toast(e.message, true); sp.disabled=false; sp.innerHTML = ICON.wa + ' Compartir PDF (elige WhatsApp)'; }
+      };
+    });
+}
+
+/* ---------- Historial ---------- */
+let histState = { q:'', est:'', mes:'', mias:false };
+function viewHistorial(){
+  const now = hoy().slice(0,7);
+  const delMes = DB.cotizaciones.filter(q => String(q.fecha||'').slice(0,7) === now);
+  const pend = DB.cotizaciones.filter(q => estadoDe(q) === 'Pendiente');
+  const aprob = delMes.filter(q => q.estado === 'Aprobada');
+  $('#main').innerHTML = `
+    <div class="stats">
+      <div class="stat"><div class="k">Cotizaciones del mes</div><div class="v">${delMes.length}</div></div>
+      <div class="stat"><div class="k">Monto del mes</div><div class="v">${usd(delMes.reduce((s,q)=>s+(+q.total||0),0))}</div></div>
+      <div class="stat"><div class="k">Pendientes</div><div class="v">${pend.length}</div></div>
+      <div class="stat"><div class="k">Aprobadas (mes)</div><div class="v">${usd(aprob.reduce((s,q)=>s+(+q.total||0),0))}</div></div>
+    </div>
+    <div class="card">
+      <div class="toolbar">
+        <input type="search" id="h-q" placeholder="Buscar por número, cliente, RIF o vendedor…" value="${esc(histState.q)}">
+        <select id="h-est"><option value="">Todos los estados</option>${['Pendiente','Aprobada','Rechazada','Vencida'].map(s=>`<option ${histState.est===s?'selected':''}>${s}</option>`).join('')}</select>
+        <input type="month" id="h-mes" value="${histState.mes}" style="width:auto;min-height:40px;border:1px solid var(--bd);border-radius:8px;padding:6px 8px">
+        <label class="small" style="display:flex;gap:6px;align-items:center"><input type="checkbox" id="h-mias" ${histState.mias?'checked':''}> Solo mías</label>
+        <button class="btn" id="h-sync" title="Actualizar">↻</button>
+        <button class="btn pri" id="h-new">${ICON.nueva} Nueva</button>
+      </div>
+      <div id="h-list"></div>
+    </div>`;
+  const upd = () => { histState = { q:$('#h-q').value, est:$('#h-est').value, mes:$('#h-mes').value, mias:$('#h-mias').checked }; renderHist(); };
+  $('#h-q').oninput = upd; $('#h-est').onchange = upd; $('#h-mes').onchange = upd; $('#h-mias').onchange = upd;
+  $('#h-new').onclick = () => { draft = null; go('#/nueva'); };
+  $('#h-sync').onclick = async ev => { const b = ev.currentTarget; b.disabled = true; if(await refresh()){ renderShell(); viewHistorial(); toast('Datos actualizados'); } else b.disabled = false; };
+  renderHist();
+}
+function renderHist(){
+  const s = histState.q.trim().toLowerCase();
+  const list = DB.cotizaciones.filter(q => {
+    if(histState.est && estadoDe(q) !== histState.est) return false;
+    if(histState.mes && String(q.fecha||'').slice(0,7) !== histState.mes) return false;
+    if(histState.mias && q.usuarioId !== USER.id) return false;
+    if(s && !(`${q.numero} ${q.cliente?.nombre} ${q.cliente?.rif} ${q.usuario}`.toLowerCase().includes(s))) return false;
+    return true;
+  }).sort((a,b) => (String(b.fecha)+String(b.creado||'')).localeCompare(String(a.fecha)+String(a.creado||'')));
+  const el = $('#h-list');
+  if(!DB.cotizaciones.length){ el.innerHTML = `<div class="empty"><p>Aún no hay cotizaciones guardadas.</p><button class="btn pri" id="h-first">Crear la primera</button></div>`; $('#h-first').onclick = () => { draft = null; go('#/nueva'); }; return; }
+  if(!list.length){ el.innerHTML = `<div class="empty">Sin resultados</div>`; return; }
+  el.innerHTML = `<div class="tbl-wrap"><table class="t"><thead><tr><th>N°</th><th>Fecha</th><th>Cliente</th><th>Vendedor</th><th class="num">Total USD</th><th class="num">Total Bs</th><th>Estado</th><th></th></tr></thead><tbody>
+    ${list.map(q => { const st = estadoDe(q); return `<tr>
+      <td><a href="#/ver/${q.id}"><b>${esc(q.numero)}</b></a></td>
+      <td>${fdate(q.fecha)}</td>
+      <td>${esc(q.cliente?.nombre)}<div class="small muted">${esc(q.cliente?.rif)}</div></td>
+      <td class="small">${esc(q.usuario)}</td>
+      <td class="num"><b>${usd(q.total)}</b></td>
+      <td class="num">${q.tasa?bs(q.totalBs):'—'}</td>
+      <td><span class="badge ${st}">${st}</span></td>
+      <td class="num"><div class="btns" style="justify-content:flex-end;flex-wrap:nowrap">
+        <button class="btn sm" data-h="ver" data-id="${q.id}">Ver</button>
+        <button class="btn sm ok" data-h="wa" data-id="${q.id}" aria-label="WhatsApp">${ICON.wa}</button>
+        <button class="btn sm" data-h="dup" data-id="${q.id}">Duplicar</button>
+        ${canTouch(q)?`<button class="btn sm danger" data-h="del" data-id="${q.id}" aria-label="Eliminar">✕</button>`:''}
+      </div></td></tr>`; }).join('')}
+  </tbody></table></div><p class="small muted">${list.length} cotización(es) · actualizado ${new Date(LAST_SYNC||Date.now()).toLocaleTimeString('es-VE',{hour:'2-digit',minute:'2-digit'})}</p>`;
+  el.querySelectorAll('[data-h]').forEach(b => b.onclick = () => {
+    const q = DB.cotizaciones.find(x => x.id === b.dataset.id);
+    if(b.dataset.h === 'ver') go('#/ver/'+q.id); else quoteAction(b.dataset.h, q);
+  });
+}
+
+/* ---------- Clientes ---------- */
+const CONDICIONES = ['Contado','Crédito 7 días','Crédito 15 días','Crédito 30 días','Crédito 45 días','Crédito 60 días','50% anticipo, 50% contra entrega'];
+let cliQ = '';
+function viewClientes(){
+  $('#main').innerHTML = `<div class="card">
+    <div class="toolbar">
+      <input type="search" id="c-q" placeholder="Buscar cliente por nombre, RIF, contacto…" value="${esc(cliQ)}">
+      <button class="btn pri" id="c-new">+ Nuevo cliente</button>
+      <button class="btn" id="c-imp">Importar Excel</button>
+      <button class="btn" id="c-exp">Exportar Excel</button>
+    </div><div id="c-list"></div></div>`;
+  $('#c-q').oninput = e => { cliQ = e.target.value; renderCli(); };
+  $('#c-new').onclick = () => clienteForm(null, () => renderCli());
+  $('#c-exp').onclick = () => exportExcel('clientes', DB.clientes, `clientes-${hoy()}.xlsx`);
+  $('#c-imp').onclick = () => importExcel('clientes', async rows => {
+    const recs = rows.filter(r => r.nombre || r.rif).map(r => ({ rif:String(r.rif||'').toUpperCase(), nombre:String(r.nombre||''), contacto:String(r.contacto||''), telefono:String(r.telefono||''), email:String(r.email||''), direccion:String(r.direccion||''), condicion:String(r.condicion||'Contado') }));
+    toast('Importando ' + recs.length + ' clientes…');
+    try{ const j = await api('bulk', { col:'clientes', recs }); DB.clientes = j.data; saveCache(); toast(`Clientes: ${j.nuevos} nuevos, ${j.actualizados} actualizados`); renderCli(); }
+    catch(e){ toast(e.message, true); }
+  });
+  renderCli();
+}
+function renderCli(){
+  const s = cliQ.trim().toLowerCase();
+  const list = DB.clientes.filter(c => !s || `${c.nombre} ${c.rif} ${c.contacto} ${c.email} ${c.telefono}`.toLowerCase().includes(s)).sort((a,b)=>String(a.nombre).localeCompare(String(b.nombre)));
+  const el = $('#c-list');
+  if(!DB.clientes.length){ el.innerHTML = `<div class="empty">No hay clientes registrados. Agrega el primero o importa tu lista desde Excel.</div>`; return; }
+  if(!list.length){ el.innerHTML = `<div class="empty">Sin resultados</div>`; return; }
+  el.innerHTML = `<div class="tbl-wrap"><table class="t"><thead><tr><th>Cliente</th><th>RIF / C.I.</th><th>Contacto</th><th>Teléfono</th><th>Email</th><th>Cond. pago</th><th></th></tr></thead><tbody>
+    ${list.map(c => `<tr><td><b>${esc(c.nombre)}</b></td><td>${esc(c.rif)}</td><td>${esc(c.contacto)}</td><td>${esc(c.telefono)}</td><td>${esc(c.email)}</td><td>${esc(c.condicion)}</td>
+    <td class="num"><div class="btns" style="justify-content:flex-end;flex-wrap:nowrap"><button class="btn sm" data-e="${c.id}">Editar</button><button class="btn sm" data-cot="${c.id}">Cotizar</button>${isAdmin()?`<button class="btn sm danger" data-d="${c.id}">✕</button>`:''}</div></td></tr>`).join('')}
+  </tbody></table></div><p class="small muted">${list.length} cliente(s)</p>`;
+  el.querySelectorAll('[data-e]').forEach(b => b.onclick = () => clienteForm(DB.clientes.find(c=>c.id===b.dataset.e), renderCli));
+  el.querySelectorAll('[data-cot]').forEach(b => b.onclick = () => { draft = newDraft(); draft.clienteId = b.dataset.cot; go('#/nueva'); });
+  el.querySelectorAll('[data-d]').forEach(b => b.onclick = () => { const c = DB.clientes.find(x=>x.id===b.dataset.d);
+    confirmBox(`¿Eliminar el cliente <b>${esc(c.nombre)}</b>? Las cotizaciones ya emitidas se conservan.`, async () => { try{ await delRec('clientes', c.id); renderCli(); }catch(e){ toast(e.message, true); } }); });
+}
+function clienteForm(c, done){
+  const v = c || { rif:'', nombre:'', contacto:'', telefono:'', email:'', direccion:'', condicion:'Contado' };
+  modal(`<h2>${c?'Editar':'Nuevo'} cliente</h2><form id="cf"><div class="grid2">
+    <label class="f">RIF / C.I. *<input type="text" name="rif" value="${esc(v.rif)}" placeholder="J-12345678-9" required></label>
+    <label class="f">Razón social / Nombre *<input type="text" name="nombre" value="${esc(v.nombre)}" required></label>
+    <label class="f">Persona de contacto<input type="text" name="contacto" value="${esc(v.contacto)}"></label>
+    <label class="f">Teléfono (WhatsApp)<input type="tel" name="telefono" value="${esc(v.telefono)}" placeholder="0414-1234567"></label>
+    <label class="f">Email<input type="email" name="email" value="${esc(v.email)}"></label>
+    <label class="f">Condiciones de pago<input type="text" name="condicion" list="cond-l" value="${esc(v.condicion)}"><datalist id="cond-l">${CONDICIONES.map(x=>`<option value="${x}">`).join('')}</datalist></label>
+    <label class="f" style="grid-column:1/-1">Dirección fiscal<textarea name="direccion" rows="2">${esc(v.direccion)}</textarea></label>
+  </div><div class="acts"><button type="button" class="btn" data-act="close">Cancelar</button><button class="btn pri" type="submit" id="cf-save">Guardar</button></div></form>`, b => {
+    b.querySelector('#cf').onsubmit = ev => { ev.preventDefault();
+      const f = Object.fromEntries(new FormData(ev.target)); Object.keys(f).forEach(k => f[k] = String(f[k]).trim()); f.rif = f.rif.toUpperCase();
+      const dup = DB.clientes.find(x => String(x.rif).toUpperCase() === f.rif && (!c || x.id !== c.id));
+      if(dup) return toast('Ya existe un cliente con ese RIF: ' + dup.nombre, true);
+      busy(b.querySelector('#cf-save'), async () => {
+        const obj = await saveRec('clientes', Object.assign({}, c||{}, f), !c);
+        closeModal(); toast('Cliente guardado'); done && done(obj);
+      });
+    };
+  });
+}
+
+/* ---------- Productos ---------- */
+let prodQ = '', prodCat = '';
+const IVA_LBL = t => t==='E' ? 'Exento' : t==='R' ? `Reducido (${nf2.format(C().ivaReducido)}%)` : `General (${nf2.format(C().ivaGeneral)}%)`;
+function viewProductos(){
+  const cats = [...new Set(DB.productos.map(p => p.categoria).filter(Boolean))].sort();
+  $('#main').innerHTML = `<div class="card">
+    <div class="toolbar">
+      <input type="search" id="p-q" placeholder="Buscar por código o descripción…" value="${esc(prodQ)}">
+      <select id="p-cat"><option value="">Todas las categorías</option>${cats.map(c=>`<option ${prodCat===c?'selected':''}>${esc(c)}</option>`).join('')}</select>
+      ${isAdmin()?`<button class="btn pri" id="p-new">+ Nuevo producto</button><button class="btn" id="p-imp">Importar Excel</button>`:''}
+      <button class="btn" id="p-exp">Exportar Excel</button>
+    </div><div id="p-list"></div></div>`;
+  $('#p-q').oninput = e => { prodQ = e.target.value; renderProd(); };
+  $('#p-cat').onchange = e => { prodCat = e.target.value; renderProd(); };
+  $('#p-exp').onclick = () => exportExcel('productos', DB.productos.map(p => ({...p, iva: p.ivaTipo||'G'})), `productos-${hoy()}.xlsx`);
+  if(isAdmin()){
+    $('#p-new').onclick = () => productoForm(null);
+    $('#p-imp').onclick = () => importExcel('productos', async rows => {
+      const todos = new Set(rows.map(r => String(r.codigo ?? '').trim().toUpperCase())), usados = new Set();
+      let renombrados = 0;
+      const recs = rows.filter(r => r.codigo !== '' && r.codigo != null).map(r => {
+        let cod = String(r.codigo).trim();
+        if(usados.has(cod.toUpperCase())){ let n = 2; while(todos.has((cod+'-'+n).toUpperCase()) || usados.has((cod+'-'+n).toUpperCase())) n++; cod = cod + '-' + n; renombrados++; }
+        usados.add(cod.toUpperCase());
+        const iv = String(r.iva === '' || r.iva == null ? 'G' : r.iva).trim().toUpperCase().replace('%','');
+        const ivaTipo = ['E','EXENTO','0','NO','EX'].includes(iv) ? 'E' : ['R','REDUCIDO','8','0.08'].includes(iv) ? 'R' : 'G';
+        return { codigo:cod, descripcion:String(r.descripcion||''), categoria:String(r.categoria||''), unidad:String(r.unidad||'UND'), precio:num(r.precio), ivaTipo };
+      });
+      toast('Importando ' + recs.length + ' productos…');
+      try{ const j = await api('bulk', { col:'productos', recs }); DB.productos = j.data; saveCache(); toast(`Productos: ${j.nuevos} nuevos, ${j.actualizados} actualizados${renombrados?` · ${renombrados} códigos repetidos renombrados (ej. GRI-100-2)`:''}`); viewProductos(); }
+      catch(e){ toast(e.message, true); }
+    });
+  }
+  renderProd();
+}
+function renderProd(){
+  const s = prodQ.trim().toLowerCase(), t = C().tasa.valor;
+  const list = DB.productos.filter(p => (!prodCat || p.categoria === prodCat) && (!s || `${p.codigo} ${p.descripcion} ${p.categoria}`.toLowerCase().includes(s))).sort((a,b)=>String(a.codigo).localeCompare(String(b.codigo), 'es', {numeric:true}));
+  const el = $('#p-list');
+  if(!DB.productos.length){ el.innerHTML = `<div class="empty">No hay productos registrados.${isAdmin()?' Crea uno o importa tu lista desde Excel.':''}</div>`; return; }
+  if(!list.length){ el.innerHTML = `<div class="empty">Sin resultados</div>`; return; }
+  el.innerHTML = `<div class="tbl-wrap"><table class="t"><thead><tr><th>Código</th><th>Descripción</th><th>Categoría</th><th>Und.</th><th class="num">Precio USD</th>${t?'<th class="num">Precio Bs</th>':''}<th>IVA</th>${isAdmin()?'<th></th>':''}</tr></thead><tbody>
+    ${list.map(p => `<tr><td><b>${esc(p.codigo)}</b></td><td>${esc(p.descripcion)}</td><td>${esc(p.categoria)}</td><td>${esc(p.unidad)}</td>
+      <td class="num"><b>${usd(p.precio)}</b></td>${t?`<td class="num">${bs(num(p.precio)*t)}</td>`:''}<td class="small">${IVA_LBL(p.ivaTipo)}</td>
+      ${isAdmin()?`<td class="num"><div class="btns" style="justify-content:flex-end;flex-wrap:nowrap"><button class="btn sm" data-e="${p.id}">Editar</button><button class="btn sm danger" data-d="${p.id}">✕</button></div></td>`:''}</tr>`).join('')}
+  </tbody></table></div><p class="small muted">${list.length} producto(s)${t?` · Precios en Bs a tasa BCV ${nf4.format(t)}`:''}</p>`;
+  el.querySelectorAll('[data-e]').forEach(b => b.onclick = () => productoForm(DB.productos.find(p=>p.id===b.dataset.e)));
+  el.querySelectorAll('[data-d]').forEach(b => b.onclick = () => { const p = DB.productos.find(x=>x.id===b.dataset.d);
+    confirmBox(`¿Eliminar el producto <b>${esc(p.codigo)} · ${esc(p.descripcion)}</b>?`, async () => { try{ await delRec('productos', p.id); renderProd(); }catch(e){ toast(e.message, true); } }); });
+}
+function productoForm(p){
+  const v = p || { codigo:'', descripcion:'', categoria:'', unidad:'UND', precio:'', ivaTipo:'G' };
+  const cats = [...new Set(DB.productos.map(x => x.categoria).filter(Boolean))];
+  const unds = [...new Set(['UND','KG','M','M2','M3','LT','CAJA','PAQ','ROLLO','PZA','JGO','GAL', ...DB.productos.map(x=>x.unidad).filter(Boolean)])];
+  modal(`<h2>${p?'Editar':'Nuevo'} producto</h2><form id="pf"><div class="grid2">
+    <label class="f">Código *<input type="text" name="codigo" value="${esc(v.codigo)}" required></label>
+    <label class="f">Categoría<input type="text" name="categoria" list="cat-l" value="${esc(v.categoria)}"><datalist id="cat-l">${cats.map(x=>`<option value="${esc(x)}">`).join('')}</datalist></label>
+    <label class="f" style="grid-column:1/-1">Descripción *<input type="text" name="descripcion" value="${esc(v.descripcion)}" required></label>
+    <label class="f">Unidad<input type="text" name="unidad" list="und-l" value="${esc(v.unidad)}"><datalist id="und-l">${unds.map(x=>`<option value="${esc(x)}">`).join('')}</datalist></label>
+    <label class="f">Precio USD *<input type="number" name="precio" step="0.01" min="0" value="${v.precio}" required inputmode="decimal"></label>
+    <label class="f">IVA<select name="ivaTipo">${['G','R','E'].map(t=>`<option value="${t}" ${v.ivaTipo===t?'selected':''}>${IVA_LBL(t)}</option>`).join('')}</select></label>
+  </div><div class="acts"><button type="button" class="btn" data-act="close">Cancelar</button><button class="btn pri" type="submit" id="pf-save">Guardar</button></div></form>`, b => {
+    b.querySelector('#pf').onsubmit = ev => { ev.preventDefault();
+      const f = Object.fromEntries(new FormData(ev.target)); ['codigo','descripcion','categoria','unidad'].forEach(k => f[k] = String(f[k]).trim()); f.precio = num(f.precio);
+      const dup = DB.productos.find(x => String(x.codigo).toLowerCase() === f.codigo.toLowerCase() && (!p || x.id !== p.id));
+      if(dup) return toast('Ya existe un producto con ese código', true);
+      busy(b.querySelector('#pf-save'), async () => { await saveRec('productos', Object.assign({}, p||{}, f), !p); closeModal(); toast('Producto guardado'); viewProductos(); });
+    };
+  });
+}
+
+/* ---------- Excel ---------- */
+const HEADERS = {
+  productos:{ codigo:'Código', descripcion:'Descripción', categoria:'Categoría', unidad:'Unidad', precio:'Precio USD', iva:'IVA (G/R/E)' },
+  clientes:{ rif:'RIF / C.I.', nombre:'Razón social', contacto:'Contacto', telefono:'Teléfono', email:'Email', direccion:'Dirección', condicion:'Condición de pago' }
+};
+const EJEMPLO = {
+  productos:[{ codigo:'EJ-001', descripcion:'Ejemplo: borra esta fila', categoria:'General', unidad:'UND', precio:10.5, iva:'G' }],
+  clientes:[{ rif:'J-00000000-0', nombre:'Ejemplo: borra esta fila', contacto:'Nombre Apellido', telefono:'0414-0000000', email:'correo@ejemplo.com', direccion:'Caracas', condicion:'Contado' }]
+};
+let xlsxLoading;
+function loadXLSX(){
+  if(window.XLSX) return Promise.resolve();
+  if(xlsxLoading) return xlsxLoading;
+  xlsxLoading = new Promise((res, rej) => {
+    const s = document.createElement('script');
+    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+    s.onload = res; s.onerror = () => { xlsxLoading = null; rej(new Error('No se pudo cargar el módulo de Excel (requiere internet)')); };
+    document.head.appendChild(s);
+  });
+  return xlsxLoading;
+}
+async function exportExcel(tipo, rows, filename){
+  try{ await loadXLSX(); }catch(e){ return toast(e.message, true); }
+  const map = HEADERS[tipo], keys = Object.keys(map);
+  const data = rows.length ? rows : EJEMPLO[tipo];
+  const aoa = [keys.map(k => map[k])].concat(data.map(r => keys.map(k => k==='precio' ? num(r[k]) : (r[k] ?? ''))));
+  const ws = XLSX.utils.aoa_to_sheet(aoa);
+  ws['!cols'] = keys.map(k => ({ wch: k==='descripcion'||k==='nombre'||k==='direccion' ? 40 : 16 }));
+  const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, tipo==='productos'?'Productos':'Clientes');
+  const buf = XLSX.write(wb, { bookType:'xlsx', type:'array' });
+  download(filename, new Blob([buf], { type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }));
+}
+function normRows(aoa){
+  const norm = s => String(s ?? '').trim().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-z]/g,'');
+  const alias = { description:'descripcion', producto:'descripcion', articulo:'descripcion', preciousd:'precio', price:'precio', preciodelista:'precio',
+    razonsocial:'nombre', cliente:'nombre', ci:'rif', rifci:'rif', cedula:'rif', condiciondepago:'condicion', condicionesdepago:'condicion', condicionpago:'condicion',
+    tel:'telefono', correo:'email', cod:'codigo', und:'unidad', ivagre:'iva', impuesto:'iva' };
+  const hi = aoa.findIndex(r => r.some(c => String(c ?? '').trim()));
+  if(hi < 0) return [];
+  const keys = aoa[hi].map(h => { const n = norm(h); return alias[n] || n; });
+  return aoa.slice(hi+1).filter(r => r.some(c => String(c ?? '').trim()))
+    .map(r => Object.fromEntries(keys.map((k,i) => [k, typeof r[i] === 'number' ? r[i] : String(r[i] ?? '').trim()])))
+    .filter(r => !/^ejemplo/i.test(String(r.descripcion || r.nombre || '')));
+}
+function importExcel(tipo, onRows){
+  const cols = Object.values(HEADERS[tipo]).join(' · ');
+  loadXLSX().catch(()=>{});
+  modal(`<h2>Importar desde Excel</h2>
+    <p class="small">Sube un archivo <b>.xlsx</b> o <b>.xls</b>. Se lee la primera hoja; la primera fila lleva los encabezados:</p>
+    <p class="small"><b>${esc(cols)}</b></p>
+    ${tipo==='productos'?'<p class="small muted">IVA: G = general, R = reducido, E = exento (también acepta 16, 8, 0 o "Exento").</p>':''}
+    <p class="small muted">Si el ${tipo==='productos'?'código':'RIF'} ya existe, el registro se actualiza; si no, se crea. Los cambios quedan disponibles para todo el equipo.</p>
+    <input type="file" id="xl-f" accept=".xlsx,.xls,.xlsm,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel">
+    <div class="acts"><button class="btn" id="xl-tpl">${ICON.pdf} Descargar plantilla Excel</button><button class="btn" data-act="close">Cancelar</button></div>`, b => {
+      b.querySelector('#xl-tpl').onclick = () => exportExcel(tipo, [], `plantilla-${tipo}.xlsx`);
+      b.querySelector('#xl-f').onchange = async ev => { const file = ev.target.files[0]; if(!file) return;
+        try{ await loadXLSX(); }catch(e){ return toast(e.message, true); }
+        const rd = new FileReader();
+        rd.onload = () => {
+          try{
+            const wb = XLSX.read(new Uint8Array(rd.result), { type:'array' });
+            const ws = wb.Sheets[wb.SheetNames[0]];
+            const rows = normRows(XLSX.utils.sheet_to_json(ws, { header:1, raw:true, defval:'' }));
+            const need = tipo==='productos' ? 'codigo' : 'nombre';
+            if(!rows.length || !rows.some(r => r[need])) throw new Error(`no se encontró la columna "${HEADERS[tipo][need]}" o la hoja está vacía`);
+            closeModal(); onRows(rows);
+          }catch(e){ toast('No se pudo leer el Excel: ' + e.message, true); }
+        };
+        rd.readAsArrayBuffer(file); };
+    });
+}
+function download(name, content, type){
+  const blob = content instanceof Blob ? content : new Blob([content], {type});
+  const url = URL.createObjectURL(blob), a = document.createElement('a');
+  a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(url), 30000);
+}
+
+/* ---------- Configuración ---------- */
+function viewAjustes(){
+  const c = C(), e = c.empresa, t = c.tasa;
+  const shareLink = location.origin + location.pathname + '?api=' + encodeURIComponent(API);
+  $('#main').innerHTML = `
+  <div class="card"><h2>Datos de la empresa</h2>
+    <form id="emp-f"><div class="grid2">
+      <label class="f">Nombre / Razón social<input type="text" name="nombre" value="${esc(e.nombre)}" required></label>
+      <label class="f">RIF<input type="text" name="rif" value="${esc(e.rif)}" required></label>
+      <label class="f">Teléfono<input type="tel" name="telefono" value="${esc(e.telefono)}"></label>
+      <label class="f">Email<input type="email" name="email" value="${esc(e.email)}"></label>
+      <label class="f">Sitio web / Instagram<input type="text" name="web" value="${esc(e.web)}"></label>
+      <label class="f">Color principal<input type="color" name="color" value="${esc(e.color||'#0f4c81')}" style="height:40px;width:100%;border:1px solid var(--bd);border-radius:8px;padding:2px"></label>
+      <label class="f" style="grid-column:1/-1">Dirección fiscal<textarea name="direccion" rows="2">${esc(e.direccion)}</textarea></label>
+    </div>
+    <h3>Logo</h3>
+    <div class="row" style="align-items:center">
+      <div style="flex:0 0 auto">${e.logo?`<img src="${e.logo}" style="max-width:140px;max-height:80px;border:1px solid var(--bd);border-radius:8px;padding:4px;background:#fff">`:'<span class="muted small">Sin logo</span>'}</div>
+      <div><input type="file" id="logo-f" accept="image/*"> ${e.logo?'<button type="button" class="btn sm danger" id="logo-del">Quitar logo</button>':''}</div>
+    </div>
+    <div class="acts" style="display:flex;justify-content:flex-end;margin-top:12px"><button class="btn pri" type="submit" id="emp-save">Guardar empresa</button></div></form>
+  </div>
+
+  <div class="card"><h2>Cotizaciones e impuestos</h2>
+    <form id="cot-f"><div class="grid2">
+      <label class="f">Prefijo de numeración<input type="text" name="prefijo" value="${esc(c.prefijo)}"></label>
+      <label class="f">Próximo número<input type="number" name="siguiente" min="1" value="${c.siguiente}"></label>
+      <label class="f">Dígitos (relleno con ceros)<input type="number" name="digitos" min="1" max="10" value="${c.digitos}"></label>
+      <label class="f">Vigencia por defecto (días)<input type="number" name="vigenciaDias" min="0" value="${c.vigenciaDias}"></label>
+      <label class="f">IVA general (%)<input type="number" name="ivaGeneral" step="0.01" min="0" value="${c.ivaGeneral}"></label>
+      <label class="f">IVA reducido (%)<input type="number" name="ivaReducido" step="0.01" min="0" value="${c.ivaReducido}"></label>
+      <label class="f" style="grid-column:1/-1">Notas y condiciones por defecto<textarea name="notas" rows="3">${esc(c.notas)}</textarea></label>
+    </div>
+    <p class="small muted">Ejemplo del próximo número: <b id="num-ej">${esc(numero(c.siguiente))}</b>. Los cambios de IVA aplican a cotizaciones nuevas; las guardadas conservan sus valores.</p>
+    <div style="display:flex;justify-content:flex-end"><button class="btn pri" type="submit" id="cot-save">Guardar</button></div></form>
+  </div>
+
+  <div class="card"><h2>Tasa BCV</h2>
+    <p>Tasa actual: <b>${t.valor?nf4.format(t.valor)+' Bs/USD':'sin definir'}</b> ${t.fecha?`<span class="muted small">· ${fdate(t.fecha)} · ${esc(t.fuente)}</span>`:''}</p>
+    <label style="display:flex;gap:8px;align-items:center;margin-bottom:10px"><input type="checkbox" id="auto-t" ${LS.get('cotizador_autotasa')!=='0'?'checked':''}> Consultar automáticamente la tasa del día al abrir la app (en este dispositivo)</label>
+    <button class="btn" data-act="tasa">Actualizar / definir tasa</button>
+  </div>
+
+  <div class="card"><h2>Este teléfono</h2>
+    <p>Vendedor: <b>${esc(USER.nombre)}</b></p>
+    <button class="btn" id="u-name">Cambiar mi nombre</button>
+    <p class="small muted">La app es de acceso libre: cualquiera con el enlace puede crear, editar y borrar. Comparte el enlace solo con tu equipo.</p>
+  </div>
+
+  <div class="card"><h2>Servidor y respaldo</h2>
+    <p class="small muted">Los datos se guardan en la hoja de Google <b>Cotizador - Base de datos</b> y los ve todo el equipo.</p>
+    ${API_URL?'':`<p class="small">Enlace para conectar otros teléfonos: <input type="text" readonly value="${esc(shareLink)}" id="share-l" style="margin-top:4px"></p>`}
+    <div class="btns">
+      <button class="btn pri" id="bk-exp">${ICON.pdf} Exportar respaldo (.json)</button>
+      <button class="btn" id="bk-imp">Restaurar respaldo</button>
+      <input type="file" id="bk-f" accept=".json,application/json" class="hidden">
+    </div>
+  </div>`;
+
+  $('#emp-f').onsubmit = ev => { ev.preventDefault(); const f = Object.fromEntries(new FormData(ev.target)); Object.keys(f).forEach(k => f[k] = String(f[k]).trim());
+    busy($('#emp-save'), async () => { const emp = Object.assign({}, c.empresa, f); delete emp.logo; const j = await api('config', { config:{ empresa:emp } }); applyConfig(j.config); renderShell(); toast('Datos de la empresa guardados'); }); };
+  $('#logo-f').onchange = ev => { const file = ev.target.files[0]; if(!file) return;
+    resizeImage(file, 500, 300).then(data => busy(null, async () => { const j = await api('config', { logo:data }); applyConfig(j.config); renderShell(); viewAjustes(); toast('Logo actualizado'); }))
+      .catch(() => toast('No se pudo leer la imagen', true)); };
+  const ld = $('#logo-del'); if(ld) ld.onclick = () => busy(ld, async () => { const j = await api('config', { logo:'' }); applyConfig(j.config); renderShell(); viewAjustes(); });
+  const cf = $('#cot-f');
+  cf.oninput = () => { const f = Object.fromEntries(new FormData(cf)); $('#num-ej').textContent = (f.prefijo||'') + String(+f.siguiente||1).padStart(+f.digitos||1,'0'); };
+  cf.onsubmit = ev => { ev.preventDefault(); const f = Object.fromEntries(new FormData(cf));
+    const patch = { prefijo:f.prefijo, siguiente:Math.max(1, parseInt(f.siguiente)||1), digitos:Math.min(10, Math.max(1, parseInt(f.digitos)||1)), vigenciaDias:parseInt(f.vigenciaDias)||0, ivaGeneral:num(f.ivaGeneral), ivaReducido:num(f.ivaReducido), notas:f.notas };
+    busy($('#cot-save'), async () => { const j = await api('config', { config:patch }); applyConfig(j.config); toast('Configuración guardada'); }); };
+  $('#auto-t').onchange = e => LS.set('cotizador_autotasa', e.target.checked ? '1' : '0');
+  $('#u-name').onclick = () => askName(false);
+  const sl = $('#share-l'); if(sl) sl.onclick = () => sl.select();
+  $('#bk-exp').onclick = () => { const d = { config:C(), clientes:DB.clientes, productos:DB.productos, cotizaciones:DB.cotizaciones }; download(`respaldo-cotizador-${hoy()}.json`, JSON.stringify(d, null, 1), 'application/json'); toast('Respaldo descargado'); };
+  $('#bk-imp').onclick = () => $('#bk-f').click();
+  $('#bk-f').onchange = ev => { const file = ev.target.files[0]; if(!file) return; const rd = new FileReader();
+    rd.onload = () => { try{ const d = JSON.parse(rd.result); if(!d.config || !Array.isArray(d.cotizaciones)) throw new Error('Archivo no válido');
+      confirmBox(`Se reemplazarán los datos de TODO el equipo por el respaldo (${d.cotizaciones.length} cotizaciones, ${(d.clientes||[]).length} clientes, ${(d.productos||[]).length} productos). ¿Continuar?`, () =>
+        busy(null, async () => { toast('Restaurando…'); const j = await api('restore', { data:d }); applyData(j.data); renderShell(); viewAjustes(); toast('Respaldo restaurado'); })); }
+      catch(e){ toast('No se pudo leer el respaldo: ' + e.message, true); } };
+    rd.readAsText(file); };
+}
+function applyConfig(cfg){ DB.config = mergeConfig(cfg); saveCache(); }
+function resizeImage(file, maxW, maxH){
+  return new Promise((res, rej) => {
+    const rd = new FileReader();
+    rd.onload = () => { const img = new Image(); img.onload = () => {
+      const k = Math.min(1, maxW/img.width, maxH/img.height); const cv = document.createElement('canvas');
+      cv.width = Math.round(img.width*k); cv.height = Math.round(img.height*k);
+      cv.getContext('2d').drawImage(img, 0, 0, cv.width, cv.height);
+      const png = cv.toDataURL('image/png'); res(png.length > 150000 ? cv.toDataURL('image/jpeg', 0.88) : png);
+    }; img.onerror = rej; img.src = rd.result; };
+    rd.onerror = rej; rd.readAsDataURL(file);
+  });
+}
+function userMenu(){ askName(false); }
+
+/* ---------- Eventos globales ---------- */
+document.addEventListener('click', e => {
+  const n = e.target.closest('[data-nav]'); if(n){ if(n.dataset.nav==='nueva' && draft && draft.id) draft = null; go('#/' + n.dataset.nav); return; }
+  const a = e.target.closest('[data-act]'); if(!a) return;
+  const act = a.dataset.act;
+  if(act==='close') closeModal();
+  else if(act==='logout'){ closeModal(); askName(false); }
+  else if(act==='tasa') tasaModal();
+  else if(act==='menu') userMenu();
+});
+document.addEventListener('keydown', e => { if(e.key==='Escape' && !$('#modal').classList.contains('hidden')) closeModal(); });
+window.addEventListener('beforeunload', e => { if(editorDirty){ e.preventDefault(); e.returnValue=''; } });
+
+/* ---------- Inicio ---------- */
+async function boot(){
+  if(!API) return renderApiSetup();
+  if(loadCache()){
+    startApp();
+    if(await refresh(true)){ renderShell(); if(canAutoRefresh()) route(true); autoTasa(); }
+    else toast('Sin conexión: mostrando los últimos datos guardados en este teléfono.', true);
+    return;
+  }
+  const L = $('#login'); $('#app').classList.add('hidden'); L.classList.remove('hidden');
+  L.innerHTML = `<div class="box"><img src="${LOGO_FERMETAL}" alt=""><p class="muted small" style="text-align:center">Cargando…</p></div>`;
+  if(await refresh(true)){ startApp(); autoTasa(); return; }
+  L.innerHTML = `<div class="box"><img src="${LOGO_FERMETAL}" alt=""><h1>Sin conexión</h1><p class="muted small">No se pudo conectar con el servidor. Revisa tu internet e intenta de nuevo.</p>
+    <div class="btns" style="justify-content:center"><button class="btn pri" id="rt">Reintentar</button>${API_URL?'':'<button class="btn" id="chg">Cambiar servidor</button>'}</div></div>`;
+  $('#rt').onclick = () => boot();
+  const ch = $('#chg'); if(ch) ch.onclick = () => { LS.del('cotizador_api'); API=''; renderApiSetup(); };
+}
+boot();
+</script>
+
+</body>
+</html>
