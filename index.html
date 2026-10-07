@@ -116,6 +116,19 @@ table.t td.num,table.t th.num{text-align:right;white-space:nowrap}
 .tot-row.big{font-size:18px;font-weight:700;border-top:1px solid var(--bd);margin-top:6px;padding-top:10px}
 .tot-row.bs{font-size:16px;font-weight:700;color:var(--pri)}
 
+/* Buscador de clientes */
+.cli-search{position:relative}
+.cli-res{position:absolute;left:0;right:0;top:calc(100% + 4px);z-index:40;background:#fff;border:1px solid var(--bd);border-radius:10px;box-shadow:0 10px 30px rgba(15,23,42,.15);max-height:min(340px,55vh);overflow:auto;-webkit-overflow-scrolling:touch}
+.cli-opt{padding:10px 12px;cursor:pointer;border-bottom:1px solid #eef1f4;color:var(--tx)}
+.cli-opt:last-child{border-bottom:0}
+.cli-opt.on,.cli-opt:hover{background:#fbeeee}
+.cli-opt b{font-weight:600}
+.cli-opt .small{display:block;margin-top:2px}
+.cli-opt mark{background:#ffe9a8;color:inherit;padding:0}
+.cli-foot{padding:8px 12px;font-size:12px;color:var(--mut);background:#fafbfc;position:sticky;bottom:0;border-top:1px solid var(--bd)}
+.cli-sel{display:flex;gap:8px;align-items:center}
+.cli-sel input{flex:1}
+
 /* Modal & toast */
 #modal{position:fixed;inset:0;background:rgba(15,23,42,.45);display:flex;align-items:flex-start;justify-content:center;z-index:100;padding:5vh 12px;overflow:auto}
 #modal .box{background:#fff;border-radius:12px;width:100%;max-width:560px;padding:18px;box-shadow:0 20px 50px rgba(0,0,0,.25)}
@@ -500,15 +513,18 @@ function viewEditor(id){
     if(!draft || draft.id !== id) draft = plain(q);
   } else if(!draft || draft.id || draft._from !== 'nueva'){ draft = newDraft(); }
   const prodOpts = DB.productos.map(p => `<option value="${esc(p.codigo)} · ${esc(p.descripcion)}">`).join('');
-  const cliOpts = [...DB.clientes].sort((a,b)=>String(a.nombre).localeCompare(String(b.nombre))).map(c => `<option value="${esc(c.id)}" ${draft.clienteId===c.id?'selected':''}>${esc(c.nombre)} — ${esc(c.rif)}</option>`).join('');
+  const selCli = DB.clientes.find(x => x.id === draft.clienteId);
   $('#main').innerHTML = `
   <div class="ed-grid">
     <div style="min-width:0">
       <div class="card">
         <h2>Cliente</h2>
         <div class="row">
-          <label class="f" style="flex:3 1 260px">Seleccionar cliente
-            <select id="e-cli"><option value="">— Selecciona —</option>${cliOpts}</select></label>
+          <label class="f" style="flex:3 1 260px">Cliente (escribe nombre, RIF, contacto o teléfono)
+            <div class="cli-search"><div class="cli-sel">
+              <input type="search" id="e-cli-q" autocomplete="off" autocorrect="off" spellcheck="false" placeholder="Ej: constructora, J-123, 0414…" value="${selCli ? esc(selCli.nombre + ' — ' + selCli.rif) : ''}">
+              <button type="button" class="btn sm${selCli?'':' hidden'}" id="e-cli-x" aria-label="Quitar cliente">✕</button>
+            </div><div id="e-cli-res" class="cli-res hidden" role="listbox"></div></div></label>
           <div style="flex:0 0 auto"><button class="btn" id="e-newcli">+ Nuevo cliente</button></div>
         </div>
         <div id="e-cli-info" class="small muted" style="margin-top:8px"></div>
@@ -549,8 +565,7 @@ function viewEditor(id){
       </div>
     </div>
   </div>`;
-  const sel = $('#e-cli');
-  sel.onchange = () => { draft.clienteId = sel.value; editorDirty = true; cliInfo(); };
+  setupClienteSearch();
   $('#e-newcli').onclick = () => clienteForm(null, c => { draft.clienteId = c.id; viewEditor(draft.id); });
   const bind = (idSel, key, fn) => $(idSel).addEventListener('input', e => { draft[key] = fn ? fn(e.target.value) : e.target.value; editorDirty = true; if(key==='fecha'||key==='vigenciaDias'){ draft.vence = addDays(draft.fecha, draft.vigenciaDias); $('#e-vence').value = draft.vence; } renderTotals(); });
   bind('#e-fecha','fecha'); bind('#e-vig','vigenciaDias', v=>+v||0); bind('#e-vence','vence'); bind('#e-tasa','tasa', num); bind('#e-notas','notas');
@@ -574,6 +589,79 @@ function viewEditor(id){
   $('#e-save').onclick = saveDraft;
   $('#e-cancel').onclick = () => { const back = draft.id ? '#/ver/'+draft.id : '#/historial'; draft = null; editorDirty = false; go(back); };
   cliInfo(); renderLines();
+}
+/* ---------- Búsqueda de clientes al escribir ---------- */
+const normTxt = s => String(s ?? '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+let CLI_IDX = null, CLI_IDX_SRC = null;
+function clientIndex(){
+  if(CLI_IDX && CLI_IDX_SRC === DB.clientes) return CLI_IDX;
+  CLI_IDX_SRC = DB.clientes;
+  CLI_IDX = DB.clientes.map(c => ({ c, n:normTxt(c.nombre), k:normTxt([c.nombre, c.rif, String(c.rif||'').replace(/[^0-9a-z]/gi,''), c.contacto, c.telefono, String(c.telefono||'').replace(/\D/g,''), c.email].join(' ')) }));
+  return CLI_IDX;
+}
+function buscarClientes(q, max){
+  const words = normTxt(q).split(/\s+/).filter(Boolean);
+  if(!words.length) return { list:[], total:0 };
+  const res = [];
+  for(const it of clientIndex()){
+    if(words.every(w => it.k.includes(w))){
+      const score = it.n.startsWith(words[0]) ? 0 : it.n.includes(' ' + words[0]) ? 1 : 2;
+      res.push({ it, score });
+    }
+  }
+  res.sort((a,b) => a.score - b.score || a.it.n.localeCompare(b.it.n));
+  return { list:res.slice(0, max).map(r => r.it.c), total:res.length };
+}
+function marcar(text, q){
+  let h = esc(text);
+  normTxt(q).split(/\s+/).filter(w => w.length > 1).forEach(w => {
+    const t = normTxt(text), i = t.indexOf(w);
+    if(i >= 0 && t.length === String(text).length){ const raw = String(text); h = h.replace(esc(raw.slice(i, i + w.length)), m => '<mark>' + m + '</mark>'); }
+  });
+  return h;
+}
+function setupClienteSearch(){
+  const inp = $('#e-cli-q'), box = $('#e-cli-res'), clr = $('#e-cli-x');
+  let items = [], act = -1, timer;
+  const close = () => { box.classList.add('hidden'); act = -1; };
+  const elegir = c => {
+    draft.clienteId = c.id; editorDirty = true;
+    inp.value = c.nombre + ' — ' + c.rif; clr.classList.remove('hidden');
+    close(); cliInfo(); inp.blur();
+  };
+  const pintar = () => {
+    const q = inp.value.trim();
+    if(q.length < 2){ box.innerHTML = q ? '<div class="cli-foot">Escribe al menos 2 letras o números…</div>' : ''; box.classList.toggle('hidden', !q); items = []; return; }
+    const r = buscarClientes(q, 40); items = r.list; act = items.length ? 0 : -1;
+    box.innerHTML = items.length
+      ? items.map((c,i) => `<div class="cli-opt${i===act?' on':''}" data-i="${i}" role="option"><b>${marcar(c.nombre, q)}</b><span class="small muted">${esc(c.rif)}${c.telefono?' · '+esc(c.telefono):''}${c.contacto?' · '+esc(c.contacto):''}</span></div>`).join('')
+        + `<div class="cli-foot">${r.total > items.length ? `Mostrando ${items.length} de ${r.total}. Escribe más para afinar.` : `${r.total} cliente(s)`}</div>`
+      : `<div class="cli-opt" data-new="1"><b>No se encontró “${esc(q)}”</b><span class="small muted">Toca aquí para crear un cliente nuevo</span></div>`;
+    box.classList.remove('hidden');
+  };
+  const mover = d => { if(!items.length) return; act = (act + d + items.length) % items.length; box.querySelectorAll('.cli-opt').forEach((el,i) => el.classList.toggle('on', i === act)); const el = box.querySelector('.cli-opt.on'); if(el) el.scrollIntoView({ block:'nearest' }); };
+  inp.addEventListener('input', () => {
+    if(draft.clienteId){ draft.clienteId = ''; clr.classList.add('hidden'); cliInfo(); }
+    clearTimeout(timer); timer = setTimeout(pintar, 120);
+  });
+  inp.addEventListener('focus', () => { if(draft.clienteId) inp.select(); else if(inp.value.trim()) pintar(); });
+  inp.addEventListener('keydown', e => {
+    if(e.key === 'ArrowDown'){ e.preventDefault(); if(box.classList.contains('hidden')) pintar(); else mover(1); }
+    else if(e.key === 'ArrowUp'){ e.preventDefault(); mover(-1); }
+    else if(e.key === 'Enter'){ e.preventDefault(); if(act >= 0 && items[act]) elegir(items[act]); }
+    else if(e.key === 'Escape'){ close(); }
+  });
+  box.addEventListener('mousedown', e => e.preventDefault());
+  box.addEventListener('click', e => {
+    const o = e.target.closest('.cli-opt'); if(!o) return;
+    if(o.dataset.new){ close(); const q = inp.value.trim(); return clienteForm({ rif:/\d/.test(q) && !/\s/.test(q) ? q.toUpperCase() : '', nombre:/\d/.test(q) && !/\s/.test(q) ? '' : q, contacto:'', telefono:'', email:'', direccion:'', condicion:'Contado', _nuevo:true }, c => { draft.clienteId = c.id; viewEditor(draft.id); }); }
+    const c = items[+o.dataset.i]; if(c) elegir(c);
+  });
+  inp.addEventListener('blur', () => setTimeout(() => {
+    close();
+    if(!draft.clienteId && inp.value.trim()){ const r = buscarClientes(inp.value, 2); if(r.total === 1) elegir(r.list[0]); }
+  }, 150));
+  clr.onclick = () => { draft.clienteId = ''; editorDirty = true; inp.value = ''; clr.classList.add('hidden'); cliInfo(); inp.focus(); };
 }
 function cliInfo(){
   const c = DB.clientes.find(x => x.id === draft.clienteId);
@@ -903,7 +991,8 @@ function renderCli(){
     confirmBox(`¿Eliminar el cliente <b>${esc(c.nombre)}</b>? Las cotizaciones ya emitidas se conservan.`, async () => { try{ await delRec('clientes', c.id); renderCli(); }catch(e){ toast(e.message, true); } }); });
 }
 function clienteForm(c, done){
-  const v = c || { rif:'', nombre:'', contacto:'', telefono:'', email:'', direccion:'', condicion:'Contado' };
+  let v = c || { rif:'', nombre:'', contacto:'', telefono:'', email:'', direccion:'', condicion:'Contado' };
+  if(c && c._nuevo) c = null; // datos sugeridos para un cliente nuevo
   modal(`<h2>${c?'Editar':'Nuevo'} cliente</h2><form id="cf"><div class="grid2">
     <label class="f">RIF / C.I. *<input type="text" name="rif" value="${esc(v.rif)}" placeholder="J-12345678-9" required></label>
     <label class="f">Razón social / Nombre *<input type="text" name="nombre" value="${esc(v.nombre)}" required></label>
