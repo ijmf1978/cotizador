@@ -98,6 +98,8 @@ table.t td.num,table.t th.num{text-align:right;white-space:nowrap}
 @media (max-width:1000px){.ed-grid{grid-template-columns:1fr}.ed-side{position:static}}
 .lines td input{min-height:34px;padding:5px 7px;font-size:14px}
 .lines .q{width:80px}.lines .p{width:105px}.lines .pfix{display:inline-block;padding:7px 2px;font-weight:600;white-space:nowrap}.lines .d{width:70px}
+img[data-foto]:not([src]){visibility:hidden}.desc-w{display:flex;gap:8px;align-items:center}.pf-line{width:44px;height:44px;object-fit:contain;background:#fff;border:1px solid var(--bd);border-radius:6px;flex:0 0 auto}.pf-list{width:40px;height:40px;object-fit:contain;background:#fff;border-radius:4px;display:block}.pf-prev{width:110px;height:110px;object-fit:contain;border:1px solid var(--bd);border-radius:8px;background:#fff}.addbar #e-pimg{width:40px;height:40px}
+.doc table.d-it td.ft{width:54px;padding:3px;text-align:center;vertical-align:middle}.doc table.d-it td.ft img{width:48px;height:48px;object-fit:contain;display:block;margin:auto}
 .addbar{display:grid;grid-template-columns:1fr 100px auto;gap:8px;margin-bottom:12px}
 @media (max-width:600px){
   .addbar{grid-template-columns:1fr 80px}
@@ -246,7 +248,8 @@ function defaultConfig(){
     empresa:{ nombre:'Fermetal', rif:'', telefono:'', email:'', direccion:'', web:'', logo:LOGO_FERMETAL, color:'#b81920' },
     ivaGeneral:16, ivaReducido:8, vigenciaDias:5, prefijo:'COT-', siguiente:1, digitos:5,
     notas:'Precios expresados en dólares (USD). El monto en bolívares se calcula a la tasa oficial del BCV vigente a la fecha de la cotización. Precios sujetos a cambio sin previo aviso y a disponibilidad de inventario.',
-    tasa:{ valor:0, fecha:'', fuente:'' }
+    tasa:{ valor:0, fecha:'', fuente:'' },
+    fotosDoc:true
   };
 }
 function mergeConfig(d){
@@ -442,7 +445,7 @@ setInterval(backgroundSync, 45000);
 document.addEventListener('visibilitychange', () => { if(!document.hidden && Date.now() - LAST_SYNC > 15000) backgroundSync(); });
 
 /* ---------- Modal ---------- */
-function modal(html, onMount){ $('#modal-box').innerHTML = html; $('#modal').classList.remove('hidden'); if(onMount) onMount($('#modal-box')); const f=$('#modal-box').querySelector('input,select,textarea'); if(f && window.innerWidth>820) f.focus(); }
+function modal(html, onMount){ $('#modal-box').innerHTML = html; $('#modal').classList.remove('hidden'); if(typeof pintarFotos==='function') pintarFotos($('#modal-box')); if(onMount) onMount($('#modal-box')); const f=$('#modal-box').querySelector('input,select,textarea'); if(f && window.innerWidth>820) f.focus(); }
 function closeModal(){ $('#modal').classList.add('hidden'); $('#modal-box').innerHTML=''; }
 $('#modal').addEventListener('mousedown', e => { if(e.target.id==='modal') closeModal(); });
 function confirmBox(msg, ok){ modal(`<h2>Confirmar</h2><p>${msg}</p><div class="acts"><button class="btn" data-act="close">Cancelar</button><button class="btn pri" id="cf-ok">Aceptar</button></div>`, b => b.querySelector('#cf-ok').onclick = () => { closeModal(); ok(); }); }
@@ -548,6 +551,7 @@ function viewEditor(id){
         <h2>Productos</h2>
         ${DB.productos.length ? `
         <div class="addbar">
+          <img id="e-pimg" class="pf-line hidden" alt="">
           <input type="search" id="e-ps" list="e-pl" placeholder="Buscar por código o descripción…" autocomplete="off">
           <datalist id="e-pl">${prodOpts}</datalist>
           <input type="number" id="e-pq" value="1" min="0" step="any" aria-label="Cantidad" inputmode="decimal">
@@ -595,9 +599,16 @@ function viewEditor(id){
       const ex = draft.items.find(i => i.productoId === p.id && !num(i.descuento));
       if(ex) ex.cantidad = num(ex.cantidad) + q;
       else draft.items.push({ productoId:p.id, codigo:p.codigo, descripcion:p.descripcion, unidad:p.unidad, cantidad:q, precio:num(p.precio), descuento:0, ivaTipo:p.ivaTipo||'G' });
-      editorDirty = true; $('#e-ps').value=''; $('#e-pq').value=1; renderLines(); $('#e-ps').focus();
+      editorDirty = true; $('#e-ps').value=''; $('#e-pq').value=1; const pi = $('#e-pimg'); if(pi){ pi.classList.add('hidden'); pi.removeAttribute('src'); } renderLines(); $('#e-ps').focus();
     };
     $('#e-padd').onclick = add;
+    const pim = $('#e-pimg');
+    $('#e-ps').addEventListener('input', async () => {
+      const code = $('#e-ps').value.split(' · ')[0].trim(); const v = code;
+      const s = tieneFoto(code) ? await fotoDe(code) : '';
+      if($('#e-ps').value.split(' · ')[0].trim() !== v) return;
+      if(s){ pim.src = s; pim.classList.remove('hidden'); } else { pim.removeAttribute('src'); pim.classList.add('hidden'); }
+    });
     $('#e-ps').addEventListener('keydown', e => { if(e.key==='Enter'){ e.preventDefault(); add(); } });
     $('#e-pq').addEventListener('keydown', e => { if(e.key==='Enter'){ e.preventDefault(); add(); } });
   }
@@ -687,11 +698,12 @@ function renderLines(){
   const tb = $('#e-lines');
   if(!draft.items.length){ tb.innerHTML = `<tr><td colspan="5" class="empty">Agrega productos a la cotización</td></tr>`; renderTotals(); return; }
   tb.innerHTML = draft.items.map((it,i) => `<tr>
-    <td class="desc"><div>${esc(it.descripcion)}</div><div class="small muted">${esc(it.codigo)} · ${esc(it.unidad||'')}${it.ivaTipo==='E'?' · Exento':it.ivaTipo==='R'?' · IVA reducido':''}</div></td>
+    <td class="desc"><div class="desc-w">${fotoTag(it.codigo,'pf-line')}<div><div>${esc(it.descripcion)}</div><div class="small muted">${esc(it.codigo)} · ${esc(it.unidad||'')}${it.ivaTipo==='E'?' · Exento':it.ivaTipo==='R'?' · IVA reducido':''}</div></div></div></td>
     <td class="num" data-l="Cant."><input class="q" type="number" step="any" min="0" data-i="${i}" data-k="cantidad" value="${it.cantidad}" inputmode="decimal"></td>
     <td class="num" data-l="Precio USD"><span class="pfix">${usd(it.precio)}</span></td>
     <td class="num tot" id="lt-${i}">${usd(lineTotal(it))}</td>
     <td class="del"><button class="btn sm danger" data-del="${i}" aria-label="Quitar">✕</button></td></tr>`).join('');
+  pintarFotos(tb);
   tb.querySelectorAll('input').forEach(inp => inp.addEventListener('input', e => {
     const i = +e.target.dataset.i; draft.items[i][e.target.dataset.k] = num(e.target.value); editorDirty = true;
     $('#lt-'+i).textContent = usd(lineTotal(draft.items[i])); renderTotals(); }));
@@ -727,9 +739,44 @@ function saveDraft(){
 }
 
 /* ---------- Documento (vista / impresión / PDF) ---------- */
+
+/* ---------- Fotos de productos (base de imágenes: fotos-index.json + fotos-NN.json en GitHub) ---------- */
+const FOTOS_BASE = '';
+let FOTO_IDX = null; const FOTO_CHUNK = {}, FOTO_LOAD = {};
+async function cargarIndiceFotos(){
+  try{ const r = await fetch(FOTOS_BASE + 'fotos-index.json', { cache:'no-cache' }); if(r.ok){ const j = await r.json(); FOTO_IDX = j.codigos || {}; } }
+  catch(e){ console.warn('Fotos no disponibles', e); }
+  return FOTO_IDX;
+}
+const fotoKey = c => String(c || '').trim().toUpperCase();
+const tieneFoto = c => !!(FOTO_IDX && FOTO_IDX[fotoKey(c)]);
+function cargarChunkFotos(n){
+  if(FOTO_CHUNK[n]) return Promise.resolve(FOTO_CHUNK[n]);
+  if(!FOTO_LOAD[n]) FOTO_LOAD[n] = fetch(FOTOS_BASE + 'fotos-' + String(n).padStart(2,'0') + '.json')
+    .then(r => r.ok ? r.json() : {}).then(j => (FOTO_CHUNK[n] = j))
+    .catch(() => { delete FOTO_LOAD[n]; return {}; });
+  return FOTO_LOAD[n];
+}
+async function fotoDe(c){ const k = fotoKey(c), n = FOTO_IDX && FOTO_IDX[k]; if(!n) return ''; const ch = await cargarChunkFotos(n); return ch[k] || ''; }
+function fotoTag(c, cls){ return tieneFoto(c) ? `<img class="${cls||''}" data-foto="${esc(fotoKey(c))}" alt="">` : ''; }
+async function ponerFoto(im){ const s = await fotoDe(im.dataset.foto); if(s){ im.src = s; if(!im.complete) await new Promise(r => { im.onload = im.onerror = r; }); } else im.remove(); }
+let fotoObs = null;
+function pintarFotos(root, lazy){
+  const ims = [...(root || document).querySelectorAll('img[data-foto]:not([src])')];
+  if(lazy && 'IntersectionObserver' in window){
+    if(!fotoObs) fotoObs = new IntersectionObserver(es => es.forEach(e => { if(e.isIntersecting){ fotoObs.unobserve(e.target); ponerFoto(e.target); } }), { rootMargin:'400px' });
+    ims.forEach(i => fotoObs.observe(i)); return Promise.resolve();
+  }
+  return Promise.all(ims.map(ponerFoto));
+}
+const FOTOS_READY = cargarIndiceFotos().then(idx => {
+  if(!idx) return;
+  try{ if($('#e-lines') && draft) renderLines(); else if($('#p-list')) renderProd(); else if($('.doc-wrap')) route(true); }catch(e){}
+});
 function docHTML(q){
   const e = C().empresa, t = calc(q), cl = q.cliente || {};
-  const rows = (q.items||[]).map((it,i) => `<tr><td>${i+1}</td><td>${esc(it.codigo)}</td><td>${esc(it.descripcion)}${it.ivaTipo==='E'?' <i>(E)</i>':''}</td><td>${esc(it.unidad||'')}</td>
+  const ff = C().fotosDoc !== false && (q.items||[]).some(it => tieneFoto(it.codigo));
+  const rows = (q.items||[]).map((it,i) => `<tr><td>${i+1}</td>${ff?`<td class="ft">${fotoTag(it.codigo,'')}</td>`:''}<td>${esc(it.codigo)}</td><td>${esc(it.descripcion)}${it.ivaTipo==='E'?' <i>(E)</i>':''}</td><td>${esc(it.unidad||'')}</td>
     <td class="n">${nf2.format(it.cantidad)}</td><td class="n">${nf2.format(it.precio)}</td>${t.desc?`<td class="n">${it.descuento?nf2.format(it.descuento)+'%':''}</td>`:''}<td class="n">${nf2.format(lineTotal(it))}</td></tr>`).join('');
   let tot = `<tr><td>Subtotal</td><td>${usd(t.bruto)}</td></tr>`;
   if(t.desc) tot += `<tr><td>Descuento</td><td>- ${usd(t.desc)}</td></tr>`;
@@ -756,7 +803,7 @@ function docHTML(q){
       <div><div class="lb">Email</div>${esc(cl.email||'—')}</div>
       <div><div class="lb">Condiciones de pago</div>${esc(cl.condicion||'—')}</div>
     </div>
-    <table class="d-it"><thead><tr><th>#</th><th>Código</th><th>Descripción</th><th>Und.</th><th class="n">Cant.</th><th class="n">Precio USD</th>${t.desc?'<th class="n">Desc.</th>':''}<th class="n">Total USD</th></tr></thead><tbody>${rows}</tbody></table>
+    <table class="d-it"><thead><tr><th>#</th>${ff?'<th>Foto</th>':''}<th>Código</th><th>Descripción</th><th>Und.</th><th class="n">Cant.</th><th class="n">Precio USD</th>${t.desc?'<th class="n">Desc.</th>':''}<th class="n">Total USD</th></tr></thead><tbody>${rows}</tbody></table>
     <div class="d-foot">
       <div class="d-notes">${q.notas?`<b>Notas y condiciones</b><div style="white-space:pre-wrap;margin-top:4px">${esc(q.notas)}</div>`:''}</div>
       <table class="d-tot">${tot}</table>
@@ -787,6 +834,7 @@ function viewQuote(id){
     <div class="doc-wrap">${docHTML(q)}</div>`;
   $('#main').querySelectorAll('[data-q]').forEach(b => b.onclick = () => quoteAction(b.dataset.q, q));
   fitDoc();
+  pintarFotos($('.doc-wrap'));
   const es = $('#q-est');
   if(es) es.onchange = async e => {
     const n = Object.assign(plain(q), { estado:e.target.value }); es.disabled = true;
@@ -811,8 +859,10 @@ function quoteAction(a, q){
   if(a==='del') return confirmBox(`¿Eliminar la cotización <b>${esc(q.numero)}</b>? Esta acción no se puede deshacer.`, async () => {
     try{ await delRec('cotizaciones', q.id); toast('Cotización eliminada'); route(true); }catch(e){ toast(e.message, true); } });
 }
-function printQuote(q){
+async function printQuote(q){
+  await FOTOS_READY;
   const pa = $('#print-area'); pa.innerHTML = docHTML(q);
+  await pintarFotos(pa);
   const imgs = [...pa.querySelectorAll('img')];
   Promise.all(imgs.map(i => i.complete ? 0 : new Promise(r => { i.onload = i.onerror = r; }))).then(() => {
     const prev = document.title; document.title = q.numero + ' - ' + (q.cliente?.nombre||'');
@@ -833,7 +883,9 @@ function loadHtml2pdf(){
 }
 async function makePdfBlob(q){
   await loadHtml2pdf();
+  await FOTOS_READY;
   const holder = document.createElement('div'); holder.innerHTML = docHTML(q);
+  await pintarFotos(holder);
   const el = holder.firstElementChild; el.style.width = '740px'; el.style.padding = '10px 14px'; el.style.margin = '0';
   return await html2pdf().set({
     margin:[8,8,8,8], filename:q.numero+'.pdf', image:{type:'jpeg', quality:0.96},
@@ -1071,11 +1123,12 @@ function renderProd(){
   const el = $('#p-list');
   if(!DB.productos.length){ el.innerHTML = `<div class="empty">No hay productos registrados.${isAdmin()?' Crea uno o importa tu lista desde Excel.':''}</div>`; return; }
   if(!list.length){ el.innerHTML = `<div class="empty">Sin resultados</div>`; return; }
-  el.innerHTML = `<div class="tbl-wrap"><table class="t"><thead><tr><th>Código</th><th>Descripción</th><th>Categoría</th><th>Und.</th><th class="num">Precio USD</th>${t?'<th class="num">Precio Bs</th>':''}<th>IVA</th>${isAdmin()?'<th></th>':''}</tr></thead><tbody>
-    ${list.map(p => `<tr><td><b>${esc(p.codigo)}</b></td><td>${esc(p.descripcion)}</td><td>${esc(p.categoria)}</td><td>${esc(p.unidad)}</td>
+  el.innerHTML = `<div class="tbl-wrap"><table class="t"><thead><tr><th style="width:48px">Foto</th><th>Código</th><th>Descripción</th><th>Categoría</th><th>Und.</th><th class="num">Precio USD</th>${t?'<th class="num">Precio Bs</th>':''}<th>IVA</th>${isAdmin()?'<th></th>':''}</tr></thead><tbody>
+    ${list.map(p => `<tr><td>${fotoTag(p.codigo,'pf-list')}</td><td><b>${esc(p.codigo)}</b></td><td>${esc(p.descripcion)}</td><td>${esc(p.categoria)}</td><td>${esc(p.unidad)}</td>
       <td class="num"><b>${usd(p.precio)}</b></td>${t?`<td class="num">${bs(num(p.precio)*t)}</td>`:''}<td class="small">${IVA_LBL(p.ivaTipo)}</td>
       ${isAdmin()?`<td class="num"><div class="btns" style="justify-content:flex-end;flex-wrap:nowrap"><button class="btn sm" data-e="${p.id}">Editar</button><button class="btn sm danger" data-d="${p.id}">✕</button></div></td>`:''}</tr>`).join('')}
   </tbody></table></div><p class="small muted">${list.length} producto(s)${t?` · Precios en Bs a tasa BCV ${nf4.format(t)}`:''}</p>`;
+  pintarFotos(el, true);
   el.querySelectorAll('[data-e]').forEach(b => b.onclick = () => productoForm(DB.productos.find(p=>p.id===b.dataset.e)));
   el.querySelectorAll('[data-d]').forEach(b => b.onclick = () => { const p = DB.productos.find(x=>x.id===b.dataset.d);
     confirmBox(`¿Eliminar el producto <b>${esc(p.codigo)} · ${esc(p.descripcion)}</b>?`, async () => { try{ await delRec('productos', p.id); renderProd(); }catch(e){ toast(e.message, true); } }); });
@@ -1084,7 +1137,7 @@ function productoForm(p){
   const v = p || { codigo:'', descripcion:'', categoria:'', unidad:'UND', precio:'', ivaTipo:'G' };
   const cats = [...new Set(DB.productos.map(x => x.categoria).filter(Boolean))];
   const unds = [...new Set(['UND','KG','M','M2','M3','LT','CAJA','PAQ','ROLLO','PZA','JGO','GAL', ...DB.productos.map(x=>x.unidad).filter(Boolean)])];
-  modal(`<h2>${p?'Editar':'Nuevo'} producto</h2><form id="pf"><div class="grid2">
+  modal(`<h2>${p?'Editar':'Nuevo'} producto</h2>${p && tieneFoto(v.codigo)?`<div style="text-align:center;margin-bottom:8px">${fotoTag(v.codigo,'pf-prev')}</div>`:''}<form id="pf"><div class="grid2">
     <label class="f">Código *<input type="text" name="codigo" value="${esc(v.codigo)}" required></label>
     <label class="f">Categoría<input type="text" name="categoria" list="cat-l" value="${esc(v.categoria)}"><datalist id="cat-l">${cats.map(x=>`<option value="${esc(x)}">`).join('')}</datalist></label>
     <label class="f" style="grid-column:1/-1">Descripción *<input type="text" name="descripcion" value="${esc(v.descripcion)}" required></label>
@@ -1210,6 +1263,7 @@ function viewAjustes(){
       <label class="f">IVA general (%)<input type="number" name="ivaGeneral" step="0.01" min="0" value="${c.ivaGeneral}"></label>
       <label class="f">IVA reducido (%)<input type="number" name="ivaReducido" step="0.01" min="0" value="${c.ivaReducido}"></label>
       <label class="f" style="grid-column:1/-1">Notas y condiciones por defecto<textarea name="notas" rows="3">${esc(c.notas)}</textarea></label>
+      <label style="grid-column:1/-1;display:flex;gap:8px;align-items:center"><input type="checkbox" name="fotosDoc" ${c.fotosDoc!==false?'checked':''} style="width:auto"> Mostrar la foto de cada producto en la cotización (vista, PDF, impresión y WhatsApp)</label>
     </div>
     <p class="small muted">Ejemplo del próximo número: <b id="num-ej">${esc(numero(c.siguiente))}</b>. Los cambios de IVA aplican a cotizaciones nuevas; las guardadas conservan sus valores.</p>
     <div style="display:flex;justify-content:flex-end"><button class="btn pri" type="submit" id="cot-save">Guardar</button></div></form>
@@ -1247,7 +1301,7 @@ function viewAjustes(){
   const cf = $('#cot-f');
   cf.oninput = () => { const f = Object.fromEntries(new FormData(cf)); $('#num-ej').textContent = (f.prefijo||'') + String(+f.siguiente||1).padStart(+f.digitos||1,'0'); };
   cf.onsubmit = ev => { ev.preventDefault(); const f = Object.fromEntries(new FormData(cf));
-    const patch = { prefijo:f.prefijo, siguiente:Math.max(1, parseInt(f.siguiente)||1), digitos:Math.min(10, Math.max(1, parseInt(f.digitos)||1)), vigenciaDias:parseInt(f.vigenciaDias)||0, ivaGeneral:num(f.ivaGeneral), ivaReducido:num(f.ivaReducido), notas:f.notas };
+    const patch = { prefijo:f.prefijo, siguiente:Math.max(1, parseInt(f.siguiente)||1), digitos:Math.min(10, Math.max(1, parseInt(f.digitos)||1)), vigenciaDias:parseInt(f.vigenciaDias)||0, ivaGeneral:num(f.ivaGeneral), ivaReducido:num(f.ivaReducido), notas:f.notas, fotosDoc:!!f.fotosDoc };
     busy($('#cot-save'), async () => { const j = await api('config', { config:patch }); applyConfig(j.config); toast('Configuración guardada'); }); };
   $('#auto-t').onchange = e => LS.set('cotizador_autotasa', e.target.checked ? '1' : '0');
   $('#u-name').onclick = () => askName(false);
